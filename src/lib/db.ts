@@ -1,0 +1,44 @@
+import Dexie, { type EntityTable } from "dexie";
+import type { Level } from "@/data/cards";
+
+export interface Settings {
+  id: "main";
+  ageConfirmed: boolean;
+  player1: string;
+  player2: string;
+  maxLevel: Level;
+}
+
+export interface Favorite {
+  cardId: string;
+  addedAt: number;
+}
+
+export const db = new Dexie("wink") as Dexie & {
+  settings: EntityTable<Settings, "id">;
+  favorites: EntityTable<Favorite, "cardId">;
+};
+
+db.version(1).stores({
+  settings: "id",
+  favorites: "cardId, addedAt",
+});
+
+export const DEFAULT_SETTINGS: Settings = {
+  id: "main",
+  ageConfirmed: false,
+  player1: "",
+  player2: "",
+  maxLevel: "coquin",
+};
+
+export async function saveSettings(patch: Partial<Omit<Settings, "id">>) {
+  const current = (await db.settings.get("main")) ?? DEFAULT_SETTINGS;
+  await db.settings.put({ ...current, ...patch, id: "main" });
+}
+
+export async function toggleFavorite(cardId: string) {
+  const existing = await db.favorites.get(cardId);
+  if (existing) await db.favorites.delete(cardId);
+  else await db.favorites.put({ cardId, addedAt: Date.now() });
+}
