@@ -10,12 +10,14 @@ type Game = { id: "cartes" | "quiz" | "ludo" | "tour"; name: string; desc: strin
 
 const GAMES: Game[] = [
   { id: "cartes", name: "Cartes", desc: "Pioche, ose, recommence.", icon: "cards", bg: "bg-candy", ready: true },
-  { id: "quiz", name: "Quiz", desc: "Un numéro, une vérité.", icon: "quiz", bg: "bg-pop", ready: false },
+  { id: "quiz", name: "Quiz", desc: "Un numéro, une vérité.", icon: "quiz", bg: "bg-pop", ready: true },
   { id: "ludo", name: "Ludo Hot", desc: "Chaque capture a un prix.", icon: "dice", bg: "bg-flame", ready: false },
   { id: "tour", name: "La Tour", desc: "Un bloc, un défi.", icon: "tower", bg: "bg-ink text-cream", ready: false },
 ];
 
-export function Home({ settings, onPlay, onSettings }: { settings: Settings; onPlay: (id: "cartes") => void; onSettings: () => void }) {
+export type PlayableGame = "cartes" | "quiz";
+
+export function Home({ settings, onPlay, onSettings }: { settings: Settings; onPlay: (id: PlayableGame) => void; onSettings: () => void }) {
   const levelName = LEVELS.find((l) => l.id === settings.maxLevel)?.name;
 
   return (
@@ -70,7 +72,7 @@ export function Home({ settings, onPlay, onSettings }: { settings: Settings; onP
             onClick={() => {
               if (!g.ready) return;
               sfx.swoosh();
-              onPlay("cartes");
+              onPlay(g.id as PlayableGame);
             }}
             className={`press relative flex h-[150px] flex-col justify-between rounded-[20px] border-[3px] border-ink p-3.5 text-left ${g.bg} ${g.ready ? "shadow-[5px_5px_0_#141414]" : "opacity-60"}`}
           >

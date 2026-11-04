@@ -17,14 +17,23 @@ export interface Favorite {
   addedAt: number;
 }
 
+export interface QuizPlayed {
+  questionId: string;
+  playedAt: number;
+}
+
 export const db = new Dexie("wink") as Dexie & {
   settings: EntityTable<Settings, "id">;
   favorites: EntityTable<Favorite, "cardId">;
+  quizPlayed: EntityTable<QuizPlayed, "questionId">;
 };
 
 db.version(1).stores({
   settings: "id",
   favorites: "cardId, addedAt",
+});
+db.version(2).stores({
+  quizPlayed: "questionId, playedAt",
 });
 
 export const DEFAULT_SETTINGS: Settings = {
