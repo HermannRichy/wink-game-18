@@ -97,7 +97,7 @@ export function IconButton({ label, icon, onClick, className = "bg-cream" }: { l
       type="button"
       aria-label={label}
       onClick={onClick}
-      className={`brutal-sm press flex h-12 w-12 items-center justify-center rounded-2xl ${className}`}
+      className={`brutal-sm press flex h-12 w-12 items-center justify-center rounded-2xl text-ink ${className}`}
     >
       <Icon name={icon} />
     </button>

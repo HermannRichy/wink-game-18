@@ -11,9 +11,10 @@ import { Players } from "@/components/screens/Players";
 import { Home } from "@/components/screens/Home";
 import { CardsGame } from "@/components/screens/CardsGame";
 import { QuizGame } from "@/components/screens/QuizGame";
+import { TowerGame } from "@/components/screens/TowerGame";
 import { Mascot } from "@/components/Mascot";
 
-type View = "home" | "settings" | "cartes" | "quiz";
+type View = "home" | "settings" | "cartes" | "quiz" | "tour";
 
 export default function App() {
   const stored = useLiveQuery(async () => (await db.settings.get("main")) ?? null, []);
@@ -46,6 +47,7 @@ export default function App() {
 
   if (view === "cartes") return <CardsGame settings={settings} onExit={() => setView("home")} />;
   if (view === "quiz") return <QuizGame settings={settings} onExit={() => setView("home")} />;
+  if (view === "tour") return <TowerGame settings={settings} onExit={() => setView("home")} />;
 
   return <Home settings={settings} onPlay={(g) => setView(g)} onSettings={() => setView("settings")} />;
 }

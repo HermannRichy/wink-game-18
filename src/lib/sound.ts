@@ -96,6 +96,22 @@ export const sfx = {
     tone(880, { duration: 0.12, type: "square", volume: 0.12 });
     tone(1760, { start: 0.12, duration: 0.3, type: "square", volume: 0.12 });
   },
+  /** Toc de bois */
+  knock: () => {
+    tone(190, { duration: 0.09, type: "triangle", volume: 0.3, slideTo: 120 });
+    noise({ duration: 0.06, from: 1800, to: 900, volume: 0.12 });
+  },
+  /** Craquement du bois qui frotte */
+  creak: () => {
+    tone(95 + Math.random() * 40, { duration: 0.22, type: "sawtooth", volume: 0.05, slideTo: 70 + Math.random() * 30 });
+  },
+  /** La tour s'effondre */
+  crash: () => {
+    noise({ duration: 1.1, from: 2200, to: 150, volume: 0.32 });
+    [0, 0.08, 0.17, 0.25, 0.36, 0.5].forEach((s) =>
+      tone(140 + Math.random() * 120, { start: s, duration: 0.12, type: "triangle", volume: 0.25, slideTo: 80 }),
+    );
+  },
   /** Fin du chrono */
   alarm: () => {
     [0, 0.22, 0.44].forEach((s) => tone(988, { start: s, duration: 0.16, type: "square", volume: 0.14 }));

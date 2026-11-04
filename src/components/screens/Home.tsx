@@ -12,10 +12,10 @@ const GAMES: Game[] = [
   { id: "cartes", name: "Cartes", desc: "Pioche, ose, recommence.", icon: "cards", bg: "bg-candy", ready: true },
   { id: "quiz", name: "Quiz", desc: "Un numéro, une vérité.", icon: "quiz", bg: "bg-pop", ready: true },
   { id: "ludo", name: "Ludo Hot", desc: "Chaque capture a un prix.", icon: "dice", bg: "bg-flame", ready: false },
-  { id: "tour", name: "La Tour", desc: "Un bloc, un défi.", icon: "tower", bg: "bg-ink text-cream", ready: false },
+  { id: "tour", name: "La Tour", desc: "Un bloc, un défi. Version hot.", icon: "tower", bg: "bg-ink text-cream", ready: true },
 ];
 
-export type PlayableGame = "cartes" | "quiz";
+export type PlayableGame = "cartes" | "quiz" | "tour";
 
 export function Home({ settings, onPlay, onSettings }: { settings: Settings; onPlay: (id: PlayableGame) => void; onSettings: () => void }) {
   const levelName = LEVELS.find((l) => l.id === settings.maxLevel)?.name;
@@ -79,6 +79,9 @@ export function Home({ settings, onPlay, onSettings }: { settings: Settings; onP
             <span className={`flex h-11 w-11 items-center justify-center rounded-xl border-[2.5px] ${g.id === "tour" ? "border-cream bg-passion text-ink" : "border-ink bg-cream"}`}>
               <Icon name={g.icon} size={24} stroke={2.2} />
             </span>
+            {g.id === "tour" && (
+              <span className="absolute right-3 top-3 rounded-full border-2 border-cream bg-passion px-2 py-0.5 text-[11px] font-extrabold text-ink">HOT</span>
+            )}
             {!g.ready && (
               <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full border-2 border-current px-2 py-0.5 text-[11px] font-extrabold">
                 <Icon name="lock" size={12} stroke={2.6} /> BIENTÔT
