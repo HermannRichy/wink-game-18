@@ -10,6 +10,8 @@ export interface Settings {
   player2Gender: Gender;
   maxLevel: Level;
   soundOn: boolean;
+  /** Jeux mis en favori, affichés en tête de l'accueil */
+  favoriteGames: string[];
   /** L'utilisateur a choisi de continuer dans le navigateur sans installer */
   installSkipped: boolean;
 }
@@ -58,6 +60,7 @@ export const DEFAULT_SETTINGS: Settings = {
   player2Gender: "",
   maxLevel: "coquin",
   soundOn: true,
+  favoriteGames: [],
   installSkipped: false,
 };
 

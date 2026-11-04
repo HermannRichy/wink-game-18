@@ -2,9 +2,46 @@
 
 import type { ReactNode } from "react";
 
-type IconName = "soundOn" | "soundOff" | "back" | "settings" | "cards" | "quiz" | "dice" | "tower" | "wifi" | "timer" | "heart" | "heartFill" | "share" | "lock" | "plus";
+type IconName = "aov" | "grid" | "hand" | "glass" | "star" | "starFill" | "users" | "copy" | "soundOn" | "soundOff" | "back" | "settings" | "cards" | "quiz" | "dice" | "tower" | "wifi" | "timer" | "heart" | "heartFill" | "share" | "lock" | "plus";
 
 const PATHS: Record<IconName, ReactNode> = {
+  aov: (
+    <>
+      <path d="M9.5 9a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1 1-1.1 1.8v.5" />
+      <circle cx="12" cy="17" r="1" fill="currentColor" />
+      <rect x="3" y="3" width="18" height="18" rx="4" />
+    </>
+  ),
+  grid: (
+    <>
+      <path d="M12 3v18M3 12h18" />
+      <path d="m5 5 4 4M9 5 5 9" />
+      <circle cx="17" cy="17" r="2.6" />
+    </>
+  ),
+  hand: <path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11m0-6.5a1.5 1.5 0 0 1 3 0V11m0-5a1.5 1.5 0 0 1 3 0v7.5a7 7 0 0 1-7 7h-.5A6.5 6.5 0 0 1 4 15l-1.2-3.4a1.5 1.5 0 0 1 2.8-1L8 13" />,
+  glass: (
+    <>
+      <path d="M5 3h14l-1.8 16.2A2 2 0 0 1 15.2 21H8.8a2 2 0 0 1-2-1.8z" />
+      <path d="M6 9.5c2-1 4 1 6 0s4 1 6 0" />
+    </>
+  ),
+  star: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z" />,
+  starFill: <path fill="currentColor" d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z" />,
+  users: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+      <circle cx="17" cy="9" r="2.5" />
+      <path d="M16.5 14.5A5 5 0 0 1 21.5 19.5" />
+    </>
+  ),
+  copy: (
+    <>
+      <rect x="8" y="8" width="13" height="13" rx="2" />
+      <path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" />
+    </>
+  ),
   soundOn: (
     <>
       <path d="M4 9h4l5-4v14l-5-4H4z" />

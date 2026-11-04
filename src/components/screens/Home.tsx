@@ -1,24 +1,57 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { LEVELS } from "@/data/cards";
-import type { Settings } from "@/lib/db";
+import { GAMES, type GameId, type GameInfo } from "@/data/games";
+import { saveSettings, type Settings } from "@/lib/db";
 import { Mascot } from "@/components/Mascot";
 import { Icon, IconButton, SoundToggle } from "@/components/ui";
 import { sfx } from "@/lib/sound";
 
-type Game = { id: "cartes" | "quiz" | "ludo" | "tour"; name: string; desc: string; icon: "cards" | "quiz" | "dice" | "tower"; bg: string; ready: boolean };
+export type PlayMode = "local" | "online";
 
-const GAMES: Game[] = [
-  { id: "cartes", name: "Cartes", desc: "Pioche, ose, recommence.", icon: "cards", bg: "bg-candy", ready: true },
-  { id: "quiz", name: "Quiz", desc: "Un numéro, une vérité.", icon: "quiz", bg: "bg-pop", ready: true },
-  { id: "ludo", name: "Ludo Hot", desc: "Chaque capture a un prix.", icon: "dice", bg: "bg-flame", ready: true },
-  { id: "tour", name: "La Tour", desc: "Un bloc, un défi. Version hot.", icon: "tower", bg: "bg-ink text-cream", ready: true },
+const COMING = [
+  { name: "Dés coquins", desc: "Un dé action, un dé partie du corps." },
+  { name: "La Roue", desc: "Fais-la tourner, elle décide." },
+  { name: "Qui de nous deux ?", desc: "Votes secrets, révélation à deux." },
 ];
 
-export type PlayableGame = "cartes" | "quiz" | "ludo" | "tour";
+function Badge({ children, tone = "ink" }: { children: React.ReactNode; tone?: "ink" | "hot" | "online" }) {
+  const cls = tone === "hot" ? "bg-passion text-ink" : tone === "online" ? "bg-ink text-pop" : "bg-cream text-ink";
+  return <span className={`rounded-full border-2 border-ink px-2 py-0.5 text-[10px] font-extrabold tracking-wide ${cls}`}>{children}</span>;
+}
 
-export function Home({ settings, onPlay, onSettings }: { settings: Settings; onPlay: (id: PlayableGame) => void; onSettings: () => void }) {
+export function Home({
+  settings,
+  onPlay,
+  onJoin,
+  onSettings,
+}: {
+  settings: Settings;
+  onPlay: (id: GameId, mode: PlayMode) => void;
+  onJoin: () => void;
+  onSettings: () => void;
+}) {
   const levelName = LEVELS.find((l) => l.id === settings.maxLevel)?.name;
+  const [chooser, setChooser] = useState<GameInfo | null>(null);
+  const favs = settings.favoriteGames ?? [];
+
+  const ordered = useMemo(() => {
+    const isFav = (g: GameInfo) => favs.includes(g.id);
+    return [...GAMES.filter(isFav).sort((a, b) => favs.indexOf(a.id) - favs.indexOf(b.id)), ...GAMES.filter((g) => !isFav(g))];
+  }, [favs]);
+
+  function toggleFav(id: GameId) {
+    sfx.sparkle();
+    const next = favs.includes(id) ? favs.filter((f) => f !== id) : [...favs, id];
+    void saveSettings({ favoriteGames: next });
+  }
+
+  function open(g: GameInfo) {
+    sfx.swoosh();
+    if (g.online) setChooser(g);
+    else onPlay(g.id, "local");
+  }
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-[18px] bg-cream px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
@@ -41,65 +74,125 @@ export function Home({ settings, onPlay, onSettings }: { settings: Settings; onP
         </div>
       </div>
 
-      <section className="brutal relative h-[228px] overflow-hidden rounded-[26px] bg-passion p-5 shadow-[6px_6px_0_#141414]">
-        <div className="relative z-10 flex h-full max-w-[190px] flex-col justify-between">
+      <section className="brutal relative h-[176px] overflow-hidden rounded-[26px] bg-passion p-5 shadow-[6px_6px_0_#141414]">
+        <div className="relative z-10 flex h-full max-w-[200px] flex-col justify-between">
           <div className="flex flex-col gap-1">
             <span className="font-mono text-xs font-bold tracking-wider">CE SOIR</span>
-            <span className="break-words text-[34px] font-black leading-none tracking-[-1.5px]">
+            <span className="break-words text-[30px] font-black leading-none tracking-[-1.5px]">
               {settings.player1} &amp; {settings.player2}
             </span>
           </div>
-          <div className="flex flex-col items-start gap-2.5">
-            <button type="button" onClick={onSettings} className="rounded-full border-[2.5px] border-ink bg-cream px-3 py-1.5 text-[13px] font-bold">
-              Intensité max : {levelName}
-            </button>
-            <span className="max-w-[150px] text-[13px] font-semibold">Bouge le téléphone, il te suit du regard.</span>
-          </div>
+          <button type="button" onClick={onSettings} className="self-start rounded-full border-[2.5px] border-ink bg-cream px-3 py-1.5 text-[13px] font-bold">
+            Intensité max : {levelName}
+          </button>
         </div>
-        <div className="absolute -right-3 top-4">
-          <Mascot size={180} interactive label="Mascotte Wink" />
+        <div className="absolute -right-4 top-2">
+          <Mascot size={150} interactive label="Mascotte Wink" />
         </div>
       </section>
 
-      <h2 className="text-2xl font-extrabold tracking-tight">Choisis ton jeu</h2>
+      <button
+        type="button"
+        onClick={() => {
+          sfx.click();
+          onJoin();
+        }}
+        className="brutal-sm press flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-ink text-base font-extrabold text-pop"
+      >
+        <Icon name="users" size={20} /> REJOINDRE UNE PARTIE EN LIGNE
+      </button>
 
-      <div className="grid grid-cols-2 gap-3.5">
-        {GAMES.map((g) => (
-          <button
-            key={g.id}
-            type="button"
-            disabled={!g.ready}
-            onClick={() => {
-              if (!g.ready) return;
-              sfx.swoosh();
-              onPlay(g.id as PlayableGame);
-            }}
-            className={`press relative flex h-[150px] flex-col justify-between rounded-[20px] border-[3px] border-ink p-3.5 text-left ${g.bg} ${g.ready ? "shadow-[5px_5px_0_#141414]" : "opacity-60"}`}
-          >
-            <span className={`flex h-11 w-11 items-center justify-center rounded-xl border-[2.5px] ${g.id === "tour" ? "border-cream bg-passion text-ink" : "border-ink bg-cream"}`}>
-              <Icon name={g.icon} size={24} stroke={2.2} />
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-2xl font-extrabold tracking-tight">Les jeux</h2>
+        <span className="text-xs font-semibold text-ink/70">☆ pour mettre en favori</span>
+      </div>
+
+      <ul className="flex flex-col gap-3">
+        {ordered.map((g) => {
+          const fav = favs.includes(g.id);
+          const dark = g.bg.includes("bg-ink");
+          return (
+            <li key={g.id} className={`press relative flex items-stretch rounded-[20px] border-[3px] border-ink shadow-[4px_4px_0_#141414] ${g.bg}`}>
+              <button type="button" onClick={() => open(g)} className="flex flex-1 items-center gap-3 p-3 text-left">
+                <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border-[2.5px] ${dark ? "border-cream bg-passion text-ink" : "border-ink bg-cream"}`}>
+                  <Icon name={g.icon} size={24} stroke={2.2} />
+                </span>
+                <span className="flex min-w-0 flex-col gap-1">
+                  <span className="text-lg font-extrabold leading-tight">{g.name}</span>
+                  <span className="text-[13px] font-medium leading-snug">{g.desc}</span>
+                  <span className="flex flex-wrap gap-1">
+                    {g.hot && <Badge tone="hot">HOT</Badge>}
+                    {g.online && <Badge tone="online">EN LIGNE</Badge>}
+                    <Badge>HORS LIGNE</Badge>
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                aria-label={fav ? `Retirer ${g.name} des favoris` : `Mettre ${g.name} en favori`}
+                aria-pressed={fav}
+                onClick={() => toggleFav(g.id)}
+                className="flex w-14 shrink-0 items-center justify-center"
+              >
+                <Icon name={fav ? "starFill" : "star"} size={26} className={fav ? (dark ? "text-pop" : "text-ink") : ""} />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="flex flex-col gap-2.5">
+        <h2 className="text-lg font-extrabold">À venir</h2>
+        {COMING.map((c) => (
+          <div key={c.name} className="flex items-center gap-3 rounded-[18px] border-[3px] border-dashed border-ink p-3 opacity-70">
+            <Icon name="lock" size={20} />
+            <span className="flex flex-col">
+              <span className="text-base font-extrabold">{c.name}</span>
+              <span className="text-[13px] font-medium">{c.desc}</span>
             </span>
-            {(g.id === "tour" || g.id === "ludo") && (
-              <span className="absolute right-3 top-3 rounded-full border-2 border-cream bg-passion px-2 py-0.5 text-[11px] font-extrabold text-ink">HOT</span>
-            )}
-            {!g.ready && (
-              <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full border-2 border-current px-2 py-0.5 text-[11px] font-extrabold">
-                <Icon name="lock" size={12} stroke={2.6} /> BIENTÔT
-              </span>
-            )}
-            <span className="flex flex-col gap-0.5">
-              <span className="text-xl font-extrabold">{g.name}</span>
-              <span className="text-[13px] font-medium">{g.desc}</span>
-            </span>
-          </button>
+          </div>
         ))}
       </div>
 
-      <button type="button" disabled className="flex h-[54px] items-center justify-center gap-2 rounded-2xl border-[3px] border-dashed border-ink text-base font-bold">
-        <Icon name="wifi" size={20} /> Jouer à distance · bientôt
-      </button>
-
       <p className="text-center text-[11px] font-medium text-ink/70">Emoji 😏 : Twemoji, licence CC-BY 4.0</p>
+
+      {chooser && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 p-4" role="dialog" aria-modal="true" aria-labelledby="mode-title" onClick={() => setChooser(null)}>
+          <div className="pop-in flex w-full max-w-md flex-col gap-3.5 rounded-[26px] border-[3px] border-ink bg-cream p-5 shadow-[6px_6px_0_#141414]" onClick={(e) => e.stopPropagation()}>
+            <span className="font-mono text-xs font-bold">{chooser.name.toUpperCase()}</span>
+            <h2 id="mode-title" className="text-[28px] font-black leading-none tracking-tight">
+              Comment vous <span className="highlight">jouez ?</span>
+            </h2>
+            <button
+              type="button"
+              onClick={() => {
+                sfx.click();
+                setChooser(null);
+                onPlay(chooser.id, "local");
+              }}
+              className="brutal-sm press flex flex-col items-start gap-0.5 rounded-2xl bg-pop p-4 text-left"
+            >
+              <span className="text-lg font-extrabold">Sur ce téléphone</span>
+              <span className="text-sm font-medium">On se le passe à tour de rôle. Marche sans connexion.</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                sfx.click();
+                setChooser(null);
+                onPlay(chooser.id, "online");
+              }}
+              className="brutal-sm press flex flex-col items-start gap-0.5 rounded-2xl bg-ink p-4 text-left text-cream"
+            >
+              <span className="text-lg font-extrabold text-pop">Chacun sur son téléphone</span>
+              <span className="text-sm font-medium">Je crée une partie en ligne et j'envoie le code. Connexion requise.</span>
+            </button>
+            <button type="button" onClick={() => setChooser(null)} className="h-11 text-sm font-semibold underline">
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

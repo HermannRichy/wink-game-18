@@ -14,13 +14,37 @@ import { QuizGame } from "@/components/screens/QuizGame";
 import { TowerGame } from "@/components/screens/TowerGame";
 import { LudoGame } from "@/components/screens/LudoGame";
 import { Mascot } from "@/components/Mascot";
+import { LocalDuoGame, DUO_GAMES } from "@/components/games/registry";
+import { OnlineLobby } from "@/components/online/OnlineLobby";
+import type { GameId } from "@/data/games";
 
-type View = "home" | "settings" | "cartes" | "quiz" | "ludo" | "tour";
+type View =
+  | { name: "home" }
+  | { name: "settings" }
+  | { name: "game"; game: GameId }
+  | { name: "online"; game?: GameId; code?: string };
 
 export default function App() {
   const stored = useLiveQuery(async () => (await db.settings.get("main")) ?? null, []);
   const { ready, standalone } = useInstall();
-  const [view, setView] = useState<View>("home");
+  const [view, setView] = useState<View>({ name: "home" });
+
+  // Lien d'invitation : /?join=CODE
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const join = params.get("join");
+      if (join) {
+        setView({ name: "online", code: join });
+        params.delete("join");
+        const q = params.toString();
+        window.history.replaceState(null, "", window.location.pathname + (q ? `?${q}` : ""));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const home = () => setView({ name: "home" });
   const settings = stored === undefined ? undefined : { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
 
   useEffect(() => {
@@ -39,17 +63,41 @@ export default function App() {
   if (!settings.ageConfirmed) return <AgeGate />;
   if (!standalone && !settings.installSkipped) return <Install />;
   if (!settings.player1 || !settings.player2 || !settings.player1Gender || !settings.player2Gender) {
-    return <Players settings={settings} onDone={() => setView("home")} />;
+    return <Players settings={settings} onDone={() => setView((v) => (v.name === "online" ? v : { name: "home" }))} />;
   }
 
-  if (view === "settings") {
-    return <Players settings={settings} onDone={() => setView("home")} onBack={() => setView("home")} />;
+  if (view.name === "settings") return <Players settings={settings} onDone={home} onBack={home} />;
+
+  if (view.name === "online") {
+    return <OnlineLobby key={view.code ?? view.game ?? "join"} settings={settings} create={view.game} initialCode={view.code} onExit={home} />;
   }
 
-  if (view === "cartes") return <CardsGame settings={settings} onExit={() => setView("home")} />;
-  if (view === "quiz") return <QuizGame settings={settings} onExit={() => setView("home")} />;
-  if (view === "tour") return <TowerGame settings={settings} onExit={() => setView("home")} />;
-  if (view === "ludo") return <LudoGame settings={settings} onExit={() => setView("home")} />;
+  if (view.name === "game") {
+    const g = view.game;
+    if (g === "cartes") return <CardsGame settings={settings} onExit={home} />;
+    if (g === "quiz") return <QuizGame settings={settings} onExit={home} />;
+    if (g === "tour") return <TowerGame settings={settings} onExit={home} />;
+    if (g === "ludo") return <LudoGame settings={settings} onExit={home} />;
+    if (DUO_GAMES[g]) {
+      return (
+        <LocalDuoGame
+          game={g}
+          names={[settings.player1, settings.player2]}
+          genders={[settings.player1Gender, settings.player2Gender]}
+          maxLevel={settings.maxLevel}
+          soundOn={settings.soundOn}
+          onExit={home}
+        />
+      );
+    }
+  }
 
-  return <Home settings={settings} onPlay={(g) => setView(g)} onSettings={() => setView("settings")} />;
+  return (
+    <Home
+      settings={settings}
+      onPlay={(game, mode) => setView(mode === "online" ? { name: "online", game } : { name: "game", game })}
+      onJoin={() => setView({ name: "online" })}
+      onSettings={() => setView({ name: "settings" })}
+    />
+  );
 }

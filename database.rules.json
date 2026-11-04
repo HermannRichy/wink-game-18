@@ -1,0 +1,27 @@
+{
+  "rules": {
+    "rooms": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && (!data.exists() ? newData.child('players/p0/uid').val() === auth.uid : (data.child('players/p0/uid').val() === auth.uid || data.child('players/p1/uid').val() === auth.uid || !data.child('players/p1').exists()))",
+        ".validate": "$code.matches(/^[A-Z2-9]{5}$/) && newData.hasChildren(['code', 'game', 'createdAt', 'players', 'stateJson'])",
+        "code": { ".validate": "newData.val() === $code" },
+        "game": { ".validate": "newData.isString() && newData.val().length < 20" },
+        "createdAt": { ".validate": "newData.isNumber()" },
+        "stateJson": { ".validate": "newData.isString() && newData.val().length < 20000" },
+        "live": { ".validate": "newData.isString() && newData.val().length < 2000" },
+        "players": {
+          "$p": {
+            ".validate": "($p === 'p0' || $p === 'p1') && newData.hasChildren(['uid', 'name', 'online'])",
+            "uid": { ".validate": "newData.isString()" },
+            "name": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "gender": { ".validate": "newData.val() === 'h' || newData.val() === 'f' || newData.val() === ''" },
+            "online": { ".validate": "newData.isBoolean()" },
+            "$other": { ".validate": false }
+          }
+        },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

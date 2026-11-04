@@ -69,7 +69,44 @@ function noise({ duration = 0.3, from = 400, to = 2400, volume = 0.18 } = {}) {
   src.stop(t0 + duration);
 }
 
+/** Bruit d'eau continu dont le volume et la hauteur suivent le débit (0..1). */
+export function pourSound() {
+  const ac = audio();
+  if (!ac) return { set: () => {}, stop: () => {} };
+  const buffer = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  const src = ac.createBufferSource();
+  src.buffer = buffer;
+  src.loop = true;
+  const filter = ac.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.Q.value = 0.9;
+  filter.frequency.value = 500;
+  const gain = ac.createGain();
+  gain.gain.value = 0;
+  src.connect(filter).connect(gain).connect(ac.destination);
+  src.start();
+  return {
+    set(flow: number) {
+      const t = ac.currentTime;
+      gain.gain.setTargetAtTime(Math.min(0.28, flow * 0.3), t, 0.05);
+      filter.frequency.setTargetAtTime(380 + flow * 900, t, 0.08);
+    },
+    stop() {
+      const t = ac.currentTime;
+      gain.gain.setTargetAtTime(0, t, 0.05);
+      src.stop(t + 0.3);
+    },
+  };
+}
+
 export const sfx = {
+  /** Plouf : quelques gouttes qui tombent */
+  splash: () => {
+    noise({ duration: 0.5, from: 2600, to: 400, volume: 0.25 });
+    [0, 0.12, 0.2, 0.33].forEach((s) => tone(900 + Math.random() * 700, { start: s, duration: 0.08, type: "sine", volume: 0.12, slideTo: 300 }));
+  },
   /** Petit clic de bouton */
   click: () => tone(620, { duration: 0.05, type: "square", volume: 0.08 }),
   /** Carte qu'on pioche ou qu'on retourne */

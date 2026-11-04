@@ -166,6 +166,8 @@ export function fill(text: string, moi: string, toi: string, g?: { addressee?: G
     t = t
       .replaceAll("le plus fier ou la plus fière", f ? "la plus fière" : "le plus fier")
       .replaceAll("fou ou folle", f ? "folle" : "fou")
+      .replaceAll("jaloux ou jalouse", f ? "jalouse" : "jaloux")
+      .replaceAll("heureux ou heureuse", f ? "heureuse" : "heureux")
       .replace(/(\p{L}+)·e/gu, (_, w: string) => (f ? `${w}e` : w));
   }
   return t;
