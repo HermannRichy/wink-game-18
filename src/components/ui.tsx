@@ -2,9 +2,21 @@
 
 import type { ReactNode } from "react";
 
-type IconName = "back" | "settings" | "cards" | "quiz" | "dice" | "tower" | "wifi" | "timer" | "heart" | "heartFill" | "share" | "lock" | "plus";
+type IconName = "soundOn" | "soundOff" | "back" | "settings" | "cards" | "quiz" | "dice" | "tower" | "wifi" | "timer" | "heart" | "heartFill" | "share" | "lock" | "plus";
 
 const PATHS: Record<IconName, ReactNode> = {
+  soundOn: (
+    <>
+      <path d="M4 9h4l5-4v14l-5-4H4z" />
+      <path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" />
+    </>
+  ),
+  soundOff: (
+    <>
+      <path d="M4 9h4l5-4v14l-5-4H4z" />
+      <path d="m17 9 5 6M22 9l-5 6" />
+    </>
+  ),
   back: <path d="M15 5 8 12l7 7" />,
   settings: (
     <>
@@ -89,6 +101,23 @@ export function IconButton({ label, icon, onClick, className = "bg-cream" }: { l
     >
       <Icon name={icon} />
     </button>
+  );
+}
+
+export function SoundToggle({ on, className = "bg-cream" }: { on: boolean; className?: string }) {
+  return (
+    <IconButton
+      label={on ? "Couper le son" : "Activer le son"}
+      icon={on ? "soundOn" : "soundOff"}
+      className={className}
+      onClick={async () => {
+        const { saveSettings } = await import("@/lib/db");
+        const { setSoundEnabled, sfx } = await import("@/lib/sound");
+        setSoundEnabled(!on);
+        if (!on) sfx.click();
+        await saveSettings({ soundOn: !on });
+      }}
+    />
   );
 }
 

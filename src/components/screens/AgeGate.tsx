@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Mascot } from "@/components/Mascot";
 import { saveSettings } from "@/lib/db";
+import { sfx } from "@/lib/sound";
 
 export function AgeGate() {
   const [refused, setRefused] = useState(false);
@@ -36,14 +37,20 @@ export function AgeGate() {
           <>
             <button
               type="button"
-              onClick={() => saveSettings({ ageConfirmed: true })}
+              onClick={() => {
+                sfx.success();
+                saveSettings({ ageConfirmed: true });
+              }}
               className="press h-[60px] rounded-[18px] border-[3px] border-ink bg-ink text-lg font-bold tracking-wide text-cream shadow-[5px_5px_0_#FFD93D]"
             >
               OUI, J'AI 18 ANS OU PLUS
             </button>
             <button
               type="button"
-              onClick={() => setRefused(true)}
+              onClick={() => {
+                sfx.fail();
+                setRefused(true);
+              }}
               className="h-14 rounded-[18px] border-[3px] border-ink bg-cream text-[17px] font-semibold"
             >
               Non, je sors

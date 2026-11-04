@@ -6,7 +6,10 @@ import { GAGES, LEVEL_ORDER, fill, type Card, type Level } from "@/data/cards";
 import { buildDeck, pick, vibrate } from "@/lib/deck";
 import { db, toggleFavorite, type Settings } from "@/lib/db";
 import { Mascot } from "@/components/Mascot";
-import { Icon, Screen, TopBar } from "@/components/ui";
+import { Icon, Screen, SoundToggle, TopBar } from "@/components/ui";
+import { sfx } from "@/lib/sound";
+
+const PREP_SECONDS = 10;
 
 const LEVEL_BG: Record<Level, string> = { doux: "bg-candy", coquin: "bg-passion", brulant: "bg-flame" };
 const LEVEL_LABEL: Record<Level, string> = { doux: "DOUX", coquin: "COQUIN", brulant: "BRÛLANT" };
@@ -27,6 +30,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
   const [gage, setGage] = useState<string | null>(null);
   const [askPass, setAskPass] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [prep, setPrep] = useState<number | null>(null);
 
   const names = [settings.player1, settings.player2];
   const moi = names[turn];
@@ -37,19 +41,44 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
   const favorites = useLiveQuery(() => db.favorites.toArray(), []);
   const isFav = useMemo(() => !!card && !!favorites?.some((f) => f.cardId === card.id), [favorites, card]);
 
-  // Chrono des défis
+  // Décompte de préparation (10 s), puis lancement automatique du chrono du défi
   useEffect(() => {
-    if (timeLeft === null || timeLeft <= 0) return;
+    if (prep === null) return;
+    if (prep === 0) {
+      setPrep(null);
+      startTimer();
+      return;
+    }
+    sfx.tick(prep <= 3);
+    const t = setTimeout(() => setPrep((p) => (p === null ? null : p - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [prep]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Chrono du défi
+  useEffect(() => {
+    if (timeLeft === null) return;
+    if (timeLeft === 0) {
+      sfx.alarm();
+      vibrate([200, 100, 200, 100, 300]);
+      return;
+    }
+    if (timeLeft <= 5) sfx.tick(true);
     const t = setTimeout(() => setTimeLeft((s) => (s === null ? null : s - 1)), 1000);
     return () => clearTimeout(t);
   }, [timeLeft]);
-  useEffect(() => {
-    if (timeLeft === 0) vibrate([200, 100, 200]);
-  }, [timeLeft]);
+
+  function startTimer() {
+    if (!card?.seconds) return;
+    sfx.go();
+    vibrate(60);
+    setPrep(null);
+    setTimeLeft(card.seconds);
+  }
 
   function next(samePlayer = false) {
     setFlipped(false);
     setTimeLeft(null);
+    setPrep(null);
     setGage(null);
     setAskPass(false);
     // On laisse la carte se retourner avant de changer son contenu
@@ -61,22 +90,33 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
 
   function reveal() {
     if (flipped) return;
+    sfx.swoosh();
     vibrate(25);
     setFlipped(true);
+    if (card?.seconds) setPrep(PREP_SECONDS);
   }
 
   function done() {
+    sfx.success();
     vibrate(15);
     setTogether(false);
     next();
   }
 
   function refuse() {
-    if (passes[turn] > 0) setAskPass(true);
-    else setGage(fill(pick(GAGES), moi, toi));
+    setPrep(null);
+    setTimeLeft(null);
+    if (passes[turn] > 0) {
+      sfx.click();
+      setAskPass(true);
+    } else {
+      sfx.fail();
+      setGage(fill(pick(GAGES), moi, toi));
+    }
   }
 
   function usePass() {
+    sfx.sparkle();
     setPasses((p) => p.map((v, i) => (i === turn ? v - 1 : v)));
     setTogether(false);
     next();
@@ -84,6 +124,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
 
   function applyJoker() {
     if (!card?.joker) return;
+    sfx.sparkle();
     vibrate(30);
     if (card.joker === "passer") {
       setPasses((p) => p.map((v, i) => (i === turn ? v + 1 : v)));
@@ -97,6 +138,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
   }
 
   function restart() {
+    sfx.swoosh();
     setDeck(buildDeck(settings.maxLevel));
     setIndex(0);
     setTurn(0);
@@ -133,8 +175,11 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
         onBack={onExit}
         title="Cartes"
         right={
-          <span className="font-mono text-[13px] font-bold">
-            {index + 1}/{deck.length}
+          <span className="flex items-center gap-2.5">
+            <span className="font-mono text-[13px] font-bold">
+              {index + 1}/{deck.length}
+            </span>
+            <SoundToggle on={settings.soundOn} />
           </span>
         }
       />
@@ -192,7 +237,10 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
                   type="button"
                   aria-label={isFav ? "Retirer des favoris" : "Ajouter aux favoris"}
                   aria-pressed={isFav}
-                  onClick={() => toggleFavorite(card.id)}
+                  onClick={() => {
+                    sfx.click();
+                    toggleFavorite(card.id);
+                  }}
                   className="flex h-11 w-11 items-center justify-center rounded-full border-[2.5px] border-ink bg-cream"
                 >
                   <Icon name={isFav ? "heartFill" : "heart"} size={20} className={isFav ? "text-passion" : ""} />
@@ -202,15 +250,34 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
               <p className="text-[30px] font-extrabold leading-[1.08] tracking-[-1px]">{fill(card.text, moi, toi)}</p>
 
               {card.seconds ? (
-                <button
-                  type="button"
-                  onClick={() => setTimeLeft(card.seconds ?? null)}
-                  disabled={timeLeft !== null && timeLeft > 0}
-                  className="flex items-center gap-2 self-start rounded-full border-[2.5px] border-ink bg-ink px-3.5 py-2 font-mono text-base font-bold text-pop"
-                >
-                  <Icon name="timer" size={16} stroke={2.8} />
-                  {timeLeft === null ? `${formatTime(card.seconds)} · LANCER` : timeLeft === 0 ? "TERMINÉ !" : formatTime(timeLeft)}
-                </button>
+                prep !== null ? (
+                  <div className="flex items-center justify-between gap-3" aria-live="polite">
+                    <span className="flex items-baseline gap-2">
+                      <span className="text-sm font-extrabold">PRÊTS ?</span>
+                      <span key={prep} className="pop-in font-mono text-[44px] font-bold leading-none">
+                        {prep}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={startTimer}
+                      className="brutal-sm press rounded-full bg-ink px-3.5 py-2 text-sm font-extrabold text-pop"
+                    >
+                      GO MAINTENANT
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startTimer}
+                    disabled={timeLeft !== null && timeLeft > 0}
+                    aria-live="polite"
+                    className={`flex items-center gap-2 self-start rounded-full border-[2.5px] border-ink px-3.5 py-2 font-mono text-base font-bold ${timeLeft !== null && timeLeft > 0 && timeLeft <= 5 ? "bg-passion text-ink" : "bg-ink text-pop"}`}
+                  >
+                    <Icon name="timer" size={16} stroke={2.8} />
+                    {timeLeft === null ? `${formatTime(card.seconds)} · LANCER` : timeLeft === 0 ? "TERMINÉ ! · RELANCER" : formatTime(timeLeft)}
+                  </button>
+                )
               ) : (
                 <span />
               )}
@@ -258,6 +325,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
                   type="button"
                   onClick={() => {
                     setAskPass(false);
+                    sfx.fail();
                     setGage(fill(pick(GAGES), moi, toi));
                   }}
                   className="h-14 rounded-2xl border-[3px] border-ink text-base font-bold"
@@ -274,6 +342,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
                 <button
                   type="button"
                   onClick={() => {
+                    sfx.click();
                     setTogether(false);
                     next();
                   }}

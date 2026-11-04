@@ -3,8 +3,8 @@
 import { LEVELS } from "@/data/cards";
 import type { Settings } from "@/lib/db";
 import { Mascot } from "@/components/Mascot";
-import { InstallBanner } from "@/components/InstallBanner";
-import { Icon, IconButton } from "@/components/ui";
+import { Icon, IconButton, SoundToggle } from "@/components/ui";
+import { sfx } from "@/lib/sound";
 
 type Game = { id: "cartes" | "quiz" | "ludo" | "tour"; name: string; desc: string; icon: "cards" | "quiz" | "dice" | "tower"; bg: string; ready: boolean };
 
@@ -25,7 +25,18 @@ export function Home({ settings, onPlay, onSettings }: { settings: Settings; onP
           <Mascot size={38} shadow={false} />
           <span className="text-[32px] font-black tracking-[-1.5px]">wink</span>
         </div>
-        <IconButton label="Réglages" icon="settings" onClick={onSettings} className="bg-pop" />
+        <div className="flex gap-2.5">
+          <SoundToggle on={settings.soundOn} />
+          <IconButton
+            label="Réglages"
+            icon="settings"
+            onClick={() => {
+              sfx.click();
+              onSettings();
+            }}
+            className="bg-pop"
+          />
+        </div>
       </div>
 
       <section className="brutal relative h-[228px] overflow-hidden rounded-[26px] bg-passion p-5 shadow-[6px_6px_0_#141414]">
@@ -48,8 +59,6 @@ export function Home({ settings, onPlay, onSettings }: { settings: Settings; onP
         </div>
       </section>
 
-      <InstallBanner />
-
       <h2 className="text-2xl font-extrabold tracking-tight">Choisis ton jeu</h2>
 
       <div className="grid grid-cols-2 gap-3.5">
@@ -58,7 +67,11 @@ export function Home({ settings, onPlay, onSettings }: { settings: Settings; onP
             key={g.id}
             type="button"
             disabled={!g.ready}
-            onClick={() => g.ready && onPlay("cartes")}
+            onClick={() => {
+              if (!g.ready) return;
+              sfx.swoosh();
+              onPlay("cartes");
+            }}
             className={`press relative flex h-[150px] flex-col justify-between rounded-[20px] border-[3px] border-ink p-3.5 text-left ${g.bg} ${g.ready ? "shadow-[5px_5px_0_#141414]" : "opacity-60"}`}
           >
             <span className={`flex h-11 w-11 items-center justify-center rounded-xl border-[2.5px] ${g.id === "tour" ? "border-cream bg-passion text-ink" : "border-ink bg-cream"}`}>

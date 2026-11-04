@@ -4,6 +4,7 @@ import { useState } from "react";
 import { LEVELS, type Level } from "@/data/cards";
 import { saveSettings, type Settings } from "@/lib/db";
 import { Screen, TopBar } from "@/components/ui";
+import { sfx } from "@/lib/sound";
 
 const LEVEL_BG: Record<Level, string> = { doux: "bg-candy", coquin: "bg-passion", brulant: "bg-flame" };
 
@@ -16,13 +17,14 @@ export function Players({ settings, onDone, onBack }: { settings: Settings; onDo
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!ready) return;
+    sfx.success();
     await saveSettings({ player1: p1.trim(), player2: p2.trim(), maxLevel: level });
     onDone();
   }
 
   return (
     <Screen>
-      <TopBar onBack={onBack} right={<span className="font-mono text-[13px] font-bold">RÉGLAGES</span>} />
+      <TopBar onBack={onBack} right={<span className="font-mono text-[13px] font-bold">{onBack ? "RÉGLAGES" : "DERNIÈRE ÉTAPE"}</span>} />
 
       <div className="flex flex-col gap-1.5">
         <h1 className="text-[44px] font-black leading-[0.95] tracking-[-2px]">
@@ -66,7 +68,10 @@ export function Players({ settings, onDone, onBack }: { settings: Settings; onDo
                 key={lv.id}
                 type="button"
                 aria-pressed={on}
-                onClick={() => setLevel(lv.id)}
+                onClick={() => {
+                  sfx.click();
+                  setLevel(lv.id);
+                }}
                 className={`flex h-16 items-center justify-between rounded-2xl border-[3px] border-ink px-4 text-left transition ${on ? `${LEVEL_BG[lv.id]} shadow-[4px_4px_0_#141414]` : "bg-cream"}`}
               >
                 <span className="flex flex-col">

@@ -7,6 +7,9 @@ export interface Settings {
   player1: string;
   player2: string;
   maxLevel: Level;
+  soundOn: boolean;
+  /** L'utilisateur a choisi de continuer dans le navigateur sans installer */
+  installSkipped: boolean;
 }
 
 export interface Favorite {
@@ -30,11 +33,13 @@ export const DEFAULT_SETTINGS: Settings = {
   player1: "",
   player2: "",
   maxLevel: "coquin",
+  soundOn: true,
+  installSkipped: false,
 };
 
 export async function saveSettings(patch: Partial<Omit<Settings, "id">>) {
   const current = (await db.settings.get("main")) ?? DEFAULT_SETTINGS;
-  await db.settings.put({ ...current, ...patch, id: "main" });
+  await db.settings.put({ ...DEFAULT_SETTINGS, ...current, ...patch, id: "main" });
 }
 
 export async function toggleFavorite(cardId: string) {
