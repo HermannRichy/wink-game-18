@@ -35,6 +35,8 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
   const names = [settings.player1, settings.player2];
   const moi = names[turn];
   const toi = names[1 - turn];
+  const genders = [settings.player1Gender, settings.player2Gender];
+  const g = { addressee: genders[turn], other: genders[1 - turn] };
   const card = deck[index];
   const finished = index >= deck.length;
 
@@ -111,7 +113,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
       setAskPass(true);
     } else {
       sfx.fail();
-      setGage(fill(pick(GAGES), moi, toi));
+      setGage(fill(pick(GAGES), moi, toi, g));
     }
   }
 
@@ -247,7 +249,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
                 </button>
               </div>
 
-              <p className="text-[30px] font-extrabold leading-[1.08] tracking-[-1px]">{fill(card.text, moi, toi)}</p>
+              <p className="text-[30px] font-extrabold leading-[1.08] tracking-[-1px]">{fill(card.text, moi, toi, g)}</p>
 
               {card.seconds ? (
                 prep !== null ? (
@@ -326,7 +328,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
                   onClick={() => {
                     setAskPass(false);
                     sfx.fail();
-                    setGage(fill(pick(GAGES), moi, toi));
+                    setGage(fill(pick(GAGES), moi, toi, g));
                   }}
                   className="h-14 rounded-2xl border-[3px] border-ink text-base font-bold"
                 >

@@ -1,24 +1,52 @@
 "use client";
 
 import { useState } from "react";
-import { LEVELS, type Level } from "@/data/cards";
+import { LEVELS, type Gender, type Level } from "@/data/cards";
 import { saveSettings, type Settings } from "@/lib/db";
 import { Screen, TopBar } from "@/components/ui";
 import { sfx } from "@/lib/sound";
 
 const LEVEL_BG: Record<Level, string> = { doux: "bg-candy", coquin: "bg-passion", brulant: "bg-flame" };
 
+function GenderPicker({ value, onChange, label }: { value: Gender; onChange: (g: Gender) => void; label: string }) {
+  return (
+    <div role="group" aria-label={label} className="grid grid-cols-2 gap-2">
+      {(
+        [
+          ["h", "Homme"],
+          ["f", "Femme"],
+        ] as const
+      ).map(([g, name]) => (
+        <button
+          key={g}
+          type="button"
+          aria-pressed={value === g}
+          onClick={() => {
+            sfx.click();
+            onChange(g);
+          }}
+          className={`h-11 rounded-xl border-[3px] border-ink text-[15px] font-bold ${value === g ? "bg-ink text-cream" : "bg-cream"}`}
+        >
+          {name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function Players({ settings, onDone, onBack }: { settings: Settings; onDone: () => void; onBack?: () => void }) {
   const [p1, setP1] = useState(settings.player1);
   const [p2, setP2] = useState(settings.player2);
+  const [g1, setG1] = useState<Gender>(settings.player1Gender);
+  const [g2, setG2] = useState<Gender>(settings.player2Gender);
   const [level, setLevel] = useState<Level>(settings.maxLevel);
-  const ready = p1.trim().length > 0 && p2.trim().length > 0;
+  const ready = p1.trim().length > 0 && p2.trim().length > 0 && g1 !== "" && g2 !== "";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!ready) return;
     sfx.success();
-    await saveSettings({ player1: p1.trim(), player2: p2.trim(), maxLevel: level });
+    await saveSettings({ player1: p1.trim(), player2: p2.trim(), player1Gender: g1, player2Gender: g2, maxLevel: level });
     onDone();
   }
 
@@ -30,7 +58,7 @@ export function Players({ settings, onDone, onBack }: { settings: Settings; onDo
         <h1 className="text-[44px] font-black leading-[0.95] tracking-[-2px]">
           Qui joue <span className="highlight">ce soir</span> ?
         </h1>
-        <p className="text-base font-medium">Vos prénoms servent dans tous les jeux.</p>
+        <p className="text-base font-medium">Vos prénoms et vos genres servent à accorder chaque défi.</p>
       </div>
 
       <form onSubmit={submit} className="flex flex-1 flex-col gap-5">
@@ -46,6 +74,7 @@ export function Players({ settings, onDone, onBack }: { settings: Settings; onDo
               className="h-14 rounded-2xl border-[3px] border-ink bg-candy px-4 text-xl font-bold shadow-[4px_4px_0_#141414] placeholder:text-ink/50"
             />
           </label>
+          <GenderPicker value={g1} onChange={setG1} label="Genre du joueur 1" />
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-bold">Joueur 2</span>
             <input
@@ -57,6 +86,7 @@ export function Players({ settings, onDone, onBack }: { settings: Settings; onDo
               className="h-14 rounded-2xl border-[3px] border-ink bg-flame px-4 text-xl font-bold shadow-[4px_4px_0_#141414] placeholder:text-ink/50"
             />
           </label>
+          <GenderPicker value={g2} onChange={setG2} label="Genre du joueur 2" />
         </div>
 
         <fieldset className="flex flex-col gap-2.5">

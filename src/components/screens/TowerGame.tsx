@@ -59,6 +59,8 @@ export function TowerGame({ settings, onExit }: { settings: Settings; onExit: ()
   const names = [settings.player1, settings.player2];
   const moi = names[turn];
   const toi = names[1 - turn];
+  const genders = [settings.player1Gender, settings.player2Gender];
+  const g = { addressee: genders[turn], other: genders[1 - turn] };
 
   const flash = useCallback((msg: string) => {
     setToast(msg);
@@ -108,7 +110,7 @@ export function TowerGame({ settings, onExit }: { settings: Settings; onExit: ()
   function refuse() {
     timer.stop();
     sfx.fail();
-    setGage(fill(pick(GAGES), moi, toi));
+    setGage(fill(pick(GAGES), moi, toi, g));
   }
 
   function replay() {
@@ -205,7 +207,7 @@ export function TowerGame({ settings, onExit }: { settings: Settings; onExit: ()
               <>
                 <span className="font-mono text-xs font-bold">GRAVÉ SUR LE BLOC · HOT</span>
                 <h2 id="tower-action" className="text-[26px] font-extrabold leading-[1.1] tracking-[-0.5px]">
-                  {fill(current.action.text, moi, toi)}
+                  {fill(current.action.text, moi, toi, g)}
                 </h2>
 
                 {current.action.seconds ? (

@@ -32,6 +32,9 @@ export function QuizGame({ settings, onExit }: { settings: Settings; onExit: () 
   const names = [settings.player1, settings.player2];
   const asker = names[turn];
   const answerer = names[1 - turn];
+  const genders = [settings.player1Gender, settings.player2Gender];
+  // Les questions s'adressent à celui ou celle qui répond
+  const g = { addressee: genders[1 - turn], other: genders[turn] };
   const free = questions.map((q, i) => (played.has(q.id) ? -1 : i)).filter((i) => i >= 0);
   const playedCount = questions.length - free.length;
 
@@ -120,7 +123,7 @@ export function QuizGame({ settings, onExit }: { settings: Settings; onExit: () 
         </div>
 
         <div className="brutal flex flex-1 flex-col justify-between gap-6 rounded-[26px] bg-cream p-6 shadow-[6px_6px_0_#141414]">
-          <p className="text-[30px] font-extrabold leading-[1.1] tracking-[-1px]">{fill(q.text, asker, answerer)}</p>
+          <p className="text-[30px] font-extrabold leading-[1.1] tracking-[-1px]">{fill(q.text, asker, answerer, g)}</p>
           <span className="flex items-center gap-2 text-sm font-semibold">
             <Icon name="heart" size={18} /> Une réponse sincère vaut un bisou.
           </span>

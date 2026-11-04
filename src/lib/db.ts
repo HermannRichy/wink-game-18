@@ -1,11 +1,13 @@
 import Dexie, { type EntityTable } from "dexie";
-import type { Level } from "@/data/cards";
+import type { Gender, Level } from "@/data/cards";
 
 export interface Settings {
   id: "main";
   ageConfirmed: boolean;
   player1: string;
   player2: string;
+  player1Gender: Gender;
+  player2Gender: Gender;
   maxLevel: Level;
   soundOn: boolean;
   /** L'utilisateur a choisi de continuer dans le navigateur sans installer */
@@ -22,10 +24,18 @@ export interface QuizPlayed {
   playedAt: number;
 }
 
+export interface LudoSave {
+  id: "current";
+  pawns: [number[], number[]];
+  turn: number;
+  updatedAt: number;
+}
+
 export const db = new Dexie("wink") as Dexie & {
   settings: EntityTable<Settings, "id">;
   favorites: EntityTable<Favorite, "cardId">;
   quizPlayed: EntityTable<QuizPlayed, "questionId">;
+  ludo: EntityTable<LudoSave, "id">;
 };
 
 db.version(1).stores({
@@ -35,12 +45,17 @@ db.version(1).stores({
 db.version(2).stores({
   quizPlayed: "questionId, playedAt",
 });
+db.version(3).stores({
+  ludo: "id",
+});
 
 export const DEFAULT_SETTINGS: Settings = {
   id: "main",
   ageConfirmed: false,
   player1: "",
   player2: "",
+  player1Gender: "",
+  player2Gender: "",
   maxLevel: "coquin",
   soundOn: true,
   installSkipped: false,

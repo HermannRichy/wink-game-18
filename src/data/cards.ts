@@ -96,7 +96,7 @@ export const CARDS: Card[] = [
   q("b03", "brulant", "Qu'est-ce que {toi} fait qui te rend complètement fou ou folle ?"),
   q("b04", "brulant", "Quelle est la nuit avec {toi} que tu rejouerais sans hésiter ?"),
   q("b05", "brulant", "Quelle tenue aimerais-tu voir porter à {toi}, rien que pour toi ?"),
-  q("b06", "brulant", "Où {toi} aime-t-il ou elle le plus être embrassé·e ? Vérifie ta réponse."),
+  q("b06", "brulant", "À quel endroit {toi} préfère-t-il ou elle recevoir un baiser ? Vérifie ta réponse."),
   q("b07", "brulant", "Quel mot ou quelle phrase de {toi} te fait instantanément de l'effet ?"),
   q("b08", "brulant", "Si tu avais une seule nuit pour surprendre {toi}, que ferais-tu ?"),
   q("b09", "brulant", "Qu'est-ce que tu aimerais que {toi} te murmure plus souvent ?"),
@@ -134,6 +134,39 @@ export const GAGES: string[] = [
   "Gage : tu parles en chuchotant jusqu'à la fin de ton prochain tour.",
 ];
 
-export function fill(text: string, moi: string, toi: string) {
-  return text.replaceAll("{moi}", moi).replaceAll("{toi}", toi);
+export type Gender = "h" | "f" | "";
+
+/**
+ * Remplace les prénoms et accorde le texte au masculin ou au féminin.
+ * - addressee : genre de la personne à qui la phrase parle (« tu »)
+ * - other : genre de l'autre personne (« il ou elle », « le ou la »…)
+ * Sans genre connu, la forme neutre d'origine est conservée.
+ */
+export function fill(text: string, moi: string, toi: string, g?: { addressee?: Gender; other?: Gender }) {
+  let t = text.replaceAll("{moi}", moi).replaceAll("{toi}", toi);
+  const A = g?.addressee;
+  const O = g?.other;
+  if (O) {
+    const f = O === "f";
+    t = t
+      .replaceAll("-t-il ou elle", f ? "-t-elle" : "-t-il")
+      .replaceAll("chez lui ou chez elle", f ? "chez elle" : "chez lui")
+      .replaceAll("de lui ou d'elle", f ? "d'elle" : "de lui")
+      .replaceAll("lui ou elle", f ? "elle" : "lui")
+      .replaceAll("il ou elle", f ? "elle" : "il")
+      .replaceAll("Il ou elle", f ? "Elle" : "Il")
+      .replaceAll("Lui ou elle", f ? "Elle" : "Lui")
+      .replaceAll("Le ou la", f ? "La" : "Le")
+      .replaceAll("le ou la", f ? "la" : "le")
+      // « m'as trouvé·e » : l'accord porte sur l'autre personne
+      .replace(/(m'as \S*?)·e/g, (_, w: string) => (f ? `${w}e` : w));
+  }
+  if (A) {
+    const f = A === "f";
+    t = t
+      .replaceAll("le plus fier ou la plus fière", f ? "la plus fière" : "le plus fier")
+      .replaceAll("fou ou folle", f ? "folle" : "fou")
+      .replace(/(\p{L}+)·e/gu, (_, w: string) => (f ? `${w}e` : w));
+  }
+  return t;
 }

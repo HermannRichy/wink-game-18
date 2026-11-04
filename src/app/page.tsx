@@ -12,9 +12,10 @@ import { Home } from "@/components/screens/Home";
 import { CardsGame } from "@/components/screens/CardsGame";
 import { QuizGame } from "@/components/screens/QuizGame";
 import { TowerGame } from "@/components/screens/TowerGame";
+import { LudoGame } from "@/components/screens/LudoGame";
 import { Mascot } from "@/components/Mascot";
 
-type View = "home" | "settings" | "cartes" | "quiz" | "tour";
+type View = "home" | "settings" | "cartes" | "quiz" | "ludo" | "tour";
 
 export default function App() {
   const stored = useLiveQuery(async () => (await db.settings.get("main")) ?? null, []);
@@ -37,7 +38,7 @@ export default function App() {
   // 1. Âge  2. Installation (seulement dans le navigateur)  3. Prénoms
   if (!settings.ageConfirmed) return <AgeGate />;
   if (!standalone && !settings.installSkipped) return <Install />;
-  if (!settings.player1 || !settings.player2) {
+  if (!settings.player1 || !settings.player2 || !settings.player1Gender || !settings.player2Gender) {
     return <Players settings={settings} onDone={() => setView("home")} />;
   }
 
@@ -48,6 +49,7 @@ export default function App() {
   if (view === "cartes") return <CardsGame settings={settings} onExit={() => setView("home")} />;
   if (view === "quiz") return <QuizGame settings={settings} onExit={() => setView("home")} />;
   if (view === "tour") return <TowerGame settings={settings} onExit={() => setView("home")} />;
+  if (view === "ludo") return <LudoGame settings={settings} onExit={() => setView("home")} />;
 
   return <Home settings={settings} onPlay={(g) => setView(g)} onSettings={() => setView("settings")} />;
 }
