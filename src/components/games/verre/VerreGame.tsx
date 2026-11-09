@@ -162,7 +162,7 @@ export function VerreGame({ session, soundOn, onExit }: { session: Session<Verre
   const turnName = names[s.turn];
 
   return (
-    <GameFrame title="Le Verre" soundOn={soundOn} onExit={onExit} online={session.online} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
+    <GameFrame title="Le Verre" soundOn={soundOn} onExit={onExit} mode={session.mode} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
       <div className="flex items-center justify-between">
         <span className={`rounded-full border-[3px] border-ink px-3.5 py-2 text-base font-extrabold ${PLAYER_BG[s.turn]}`}>
           {s.phase === "over" ? "Ça déborde !" : me === s.turn ? "À toi de verser" : `Au tour de ${turnName}`}

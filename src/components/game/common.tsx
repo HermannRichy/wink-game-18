@@ -11,7 +11,7 @@ export function GameFrame({
   title,
   soundOn,
   onExit,
-  online,
+  mode,
   partnerOnline,
   partnerName,
   className = "bg-cream",
@@ -20,7 +20,7 @@ export function GameFrame({
   title: string;
   soundOn: boolean;
   onExit: () => void;
-  online: boolean;
+  mode: "local" | "duo" | "distance";
   partnerOnline: boolean;
   partnerName: string;
   className?: string;
@@ -42,10 +42,12 @@ export function GameFrame({
         <span className="truncate text-center text-[20px] font-extrabold leading-tight">{title}</span>
         <SoundToggle on={soundOn} />
       </div>
-      {online && (
+      {mode !== "local" && (
         <div className={`flex items-center justify-center gap-2 rounded-full border-[2.5px] border-ink px-3 py-1.5 text-xs font-extrabold ${partnerOnline ? "bg-cream" : "bg-pop"}`} role="status">
           <span className={`h-2.5 w-2.5 rounded-full border-2 border-ink ${partnerOnline ? "bg-[#3DDC84]" : "bg-muted"}`} />
-          {partnerOnline ? `EN LIGNE AVEC ${partnerName.toUpperCase()}` : `${partnerName.toUpperCase()} S'EST DÉCONNECTÉ·E…`}
+          {partnerOnline
+            ? `${mode === "distance" ? "À DISTANCE" : "MODE DUO"} AVEC ${partnerName.toUpperCase()}`
+            : `${partnerName.toUpperCase()} N'EST PLUS CONNECTÉ·E…`}
         </div>
       )}
       {children}

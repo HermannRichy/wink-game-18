@@ -1,22 +1,20 @@
 "use client";
 
 import { useEffect } from "react";
-import { GAGES, fill } from "@/data/cards";
-import { AOV } from "@/data/aov";
-import type { AovAction, AovState } from "@/lib/games/modules";
+import { LEVEL_BG, LEVEL_LABEL, fill, gagesFor } from "@/data/cards";
+import { aovPool, type AovAction, type AovState } from "@/lib/games/modules";
+import { markSeen } from "@/lib/seen";
 import type { Session } from "@/lib/online/session";
 import { sfx } from "@/lib/sound";
 import { vibrate } from "@/lib/deck";
 import { useChallengeTimer } from "@/lib/useChallengeTimer";
 import { GameFrame, PLAYER_BG, TimerBlock, WaitingFor } from "@/components/game/common";
 
-const LEVEL_BG = { doux: "bg-candy", coquin: "bg-passion", brulant: "bg-flame" } as const;
-const LEVEL_LABEL = { doux: "DOUX", coquin: "COQUIN", brulant: "BRÛLANT" } as const;
 
 export function AovGame({ session, soundOn, onExit }: { session: Session<AovState, AovAction>; soundOn: boolean; onExit: () => void }) {
   const { state: s, names, genders, act, canAct, me } = session;
   const timer = useChallengeTimer();
-  const card = s.cardId ? AOV.find((c) => c.id === s.cardId) : undefined;
+  const card = s.cardId ? aovPool(s.distance).find((c) => c.id === s.cardId) : undefined;
   const moi = names[s.turn];
   const toi = names[1 - s.turn];
   const g = { addressee: genders[s.turn], other: genders[1 - s.turn] };
@@ -26,6 +24,7 @@ export function AovGame({ session, soundOn, onExit }: { session: Session<AovStat
   // Nouvelle carte : son + décompte si défi chronométré (sur les deux téléphones)
   useEffect(() => {
     if (s.phase === "show" && card) {
+      markSeen("aov", card.id);
       sfx.swoosh();
       vibrate(25);
       timer.arm(card.seconds);
@@ -37,7 +36,7 @@ export function AovGame({ session, soundOn, onExit }: { session: Session<AovStat
   }, [s.phase]);
 
   return (
-    <GameFrame title="Action ou Vérité" soundOn={soundOn} onExit={onExit} online={session.online} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
+    <GameFrame title="Action ou Vérité" soundOn={soundOn} onExit={onExit} mode={session.mode} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
       <div className="flex items-center gap-2.5">
         <span className={`rounded-full border-[3px] border-ink px-3.5 py-2 text-base font-extrabold ${PLAYER_BG[s.turn]}`}>
           {me === s.turn ? "À toi de jouer" : `Au tour de ${moi}`}
@@ -124,7 +123,7 @@ export function AovGame({ session, soundOn, onExit }: { session: Session<AovStat
         <>
           <div className="pop-in brutal flex flex-1 flex-col justify-center gap-3 rounded-[26px] bg-cream p-6">
             <span className="font-mono text-xs font-bold">REFUSÉ, DONC…</span>
-            <p className="text-[30px] font-black leading-[1.05] tracking-tight">{fill(GAGES[s.gageIdx], moi, toi, g)}</p>
+            <p className="text-[30px] font-black leading-[1.05] tracking-tight">{fill(gagesFor(s.distance)[s.gageIdx], moi, toi, g)}</p>
           </div>
           {mine ? (
             <button

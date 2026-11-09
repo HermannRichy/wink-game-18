@@ -1,4 +1,4 @@
-export type Level = "doux" | "coquin" | "brulant";
+export type Level = "flirt" | "doux" | "coquin" | "brulant";
 export type CardKind = "question" | "defi" | "joker";
 export type JokerEffect = "rejouer" | "ensemble" | "passer";
 
@@ -14,18 +14,50 @@ export interface Card {
 }
 
 export const LEVELS: { id: Level; name: string; desc: string }[] = [
+  { id: "flirt", name: "Flirt", desc: "Regards, compliments, on se découvre." },
   { id: "doux", name: "Doux", desc: "Câlins, confidences, fous rires." },
   { id: "coquin", name: "Coquin", desc: "Ça chauffe gentiment." },
   { id: "brulant", name: "Brûlant", desc: "Pour les plus audacieux." },
 ];
 
-export const LEVEL_ORDER: Level[] = ["doux", "coquin", "brulant"];
+export const LEVEL_ORDER: Level[] = ["flirt", "doux", "coquin", "brulant"];
+
+/** Couleur et libellé de chaque niveau, partagés par tous les jeux */
+export const LEVEL_BG: Record<Level, string> = { flirt: "bg-pop", doux: "bg-candy", coquin: "bg-passion", brulant: "bg-flame" };
+export const LEVEL_LABEL: Record<Level, string> = { flirt: "FLIRT", doux: "DOUX", coquin: "COQUIN", brulant: "BRÛLANT" };
 
 const q = (id: string, level: Level, text: string): Card => ({ id, level, kind: "question", text });
 const d = (id: string, level: Level, text: string, seconds?: number): Card => ({ id, level, kind: "defi", text, seconds });
 const j = (id: string, level: Level, joker: JokerEffect, text: string): Card => ({ id, level, kind: "joker", joker, text });
 
 export const CARDS: Card[] = [
+  // ——— FLIRT ———
+  q("f01", "flirt", "Quel est le détail chez {toi} que tu regardes quand il ou elle ne te voit pas ?"),
+  q("f02", "flirt", "Si {toi} était une chanson, laquelle serait-ce ?"),
+  q("f03", "flirt", "Quelle est la phrase de drague la plus nulle que tu oserais dire à {toi} ? Dis-la."),
+  q("f04", "flirt", "Qu'est-ce qui t'a donné envie de revoir {toi} après votre première rencontre ?"),
+  q("f05", "flirt", "Note le sourire de {toi} sur 10, et justifie ta note."),
+  q("f06", "flirt", "Quel est le plus beau compliment qu'on t'ait fait ? {toi} doit faire mieux."),
+  q("f07", "flirt", "Quel rendez-vous rêverais-tu de vivre avec {toi} ?"),
+  q("f08", "flirt", "Quelle est la première chose que tu as remarquée chez {toi} ?"),
+  q("f09", "flirt", "Plutôt dîner aux chandelles ou soirée street food avec {toi} ?"),
+  q("f10", "flirt", "Quel super-pouvoir donnerais-tu à {toi} ?"),
+  q("f11", "flirt", "Quelle tenue de {toi} préfères-tu jusqu'ici ?"),
+  q("f12", "flirt", "Si vous partiez en voyage demain, qui ferait la valise de l'autre ?"),
+  d("f13", "flirt", "Fais un clin d'œil à {toi}, le plus charmeur possible."),
+  d("f14", "flirt", "Fais trois compliments à {toi} sans dire « beau » ni « belle »."),
+  d("f15", "flirt", "Regarde {toi} dans les yeux sans sourire. Le premier qui craque a perdu.", 20),
+  d("f16", "flirt", "Dis bonjour à {toi} comme si vous vous rencontriez pour la première fois, version charmeur."),
+  d("f17", "flirt", "Prends la main de {toi} jusqu'à ton prochain tour."),
+  d("f18", "flirt", "Fais un bisou sur la joue de {toi}."),
+  d("f19", "flirt", "Invente un surnom mignon pour {toi}. Il ou elle peut le refuser."),
+  d("f20", "flirt", "Fais la révérence à {toi} et baise-lui la main."),
+  d("f21", "flirt", "Danse 15 secondes pour faire rire {toi}.", 15),
+  d("f22", "flirt", "Écris un petit mot doux à {toi} sur ton téléphone et montre-le."),
+  d("f23", "flirt", "Murmure un compliment à l'oreille de {toi}."),
+  d("f24", "flirt", "Mime ce que tu ressens quand {toi} t'envoie un message.", 20),
+  j("f25", "flirt", "rejouer", "Joker : tu rejoues tout de suite. Pioche une autre carte."),
+  j("f26", "flirt", "ensemble", "Joker : la prochaine carte, {toi} et toi la jouez ensemble."),
   // ——— DOUX ———
   q("d01", "doux", "Raconte à {toi} le tout premier détail que tu as remarqué chez lui ou chez elle."),
   q("d02", "doux", "Quelle chanson te fait penser à {toi} ? Chantonne le refrain."),
@@ -132,7 +164,54 @@ export const GAGES: string[] = [
   "Gage : tu dois appeler {toi} « mon trésor » jusqu'à la fin de la partie.",
   "Gage : {toi} t'envoie un message, tu dois y répondre par une déclaration.",
   "Gage : tu parles en chuchotant jusqu'à la fin de ton prochain tour.",
+  "Gage : tu fais un massage des pieds à {toi} pendant une minute.",
+  "Gage : tu fais une déclaration d'amour à {toi}, à genoux.",
+  "Gage : {toi} choisit une chanson, tu danses dessus pendant 20 secondes.",
+  "Gage : tu imites {toi} pendant 15 secondes. Il ou elle note ta performance.",
+  "Gage : tu fais un câlin de 30 secondes à {toi} sans bouger.",
+  "Gage : tu dis à {toi} trois choses que tu adores chez lui ou chez elle.",
+  "Gage : {toi} dessine ce qu'il ou elle veut sur ta main, au stylo.",
+  "Gage : tu prépares le petit déjeuner de {toi} demain matin.",
+  "Gage : tu fais la vaisselle à la place de {toi} la prochaine fois.",
+  "Gage : tu chantes le refrain de votre chanson, avec les gestes.",
+  "Gage : tu fais une pose de mannequin pendant que {toi} te prend en photo.",
+  "Gage : tu fais un bisou à {toi} à l'endroit qu'il ou elle choisit, sur le visage.",
+  "Gage : tu laisses {toi} choisir ton fond d'écran jusqu'à demain.",
+  "Gage : tu racontes ton souvenir le plus gênant à {toi}.",
+  "Gage : tu donnes un bisou dans le cou de {toi}.",
+  "Gage : tu restes collé·e à {toi} jusqu'à la fin de ton prochain tour.",
+  "Gage : tu dois finir chaque phrase par « mon amour » pendant deux tours.",
+  "Gage : tu masses les mains de {toi} pendant une minute.",
+  "Gage : {toi} te pose une question, tu dois répondre en toute sincérité.",
+  "Gage : tu fais 10 pompes, ou 10 bisous à {toi}. Il ou elle choisit.",
+  "Gage : tu offres une faveur à {toi}, à réclamer quand il ou elle veut.",
+  "Gage : tu écris un mini-poème de 4 vers pour {toi}, maintenant.",
 ];
+
+/** Gages faisables à distance (Mode Distance) */
+export const DISTANCE_GAGES: string[] = [
+  "Gage : envoie un vocal de 15 secondes où tu chantes une chanson d'amour à {toi}.",
+  "Gage : change ta photo de profil WhatsApp pour une photo choisie par {toi}, jusqu'à demain.",
+  "Gage : écris un mini-poème de 4 vers pour {toi} et envoie-le.",
+  "Gage : envoie à {toi} le selfie le plus ridicule que tu puisses faire.",
+  "Gage : appelle {toi} en vidéo et fais-lui une déclaration de 20 secondes.",
+  "Gage : envoie à {toi} un vocal où tu dis trois choses que tu adores chez lui ou chez elle.",
+  "Gage : mets en statut « Je suis fou ou folle de toi » pendant une heure.",
+  "Gage : envoie à {toi} une chanson qui te fait penser à lui ou à elle, et explique pourquoi.",
+  "Gage : la prochaine fois que vous vous voyez, tu offres un massage de 5 minutes à {toi}.",
+  "Gage : tu dois répondre « oui mon amour » à {toi} pendant 10 minutes.",
+  "Gage : envoie un vocal de 10 secondes en murmurant à {toi} ce qui te manque chez lui ou chez elle.",
+  "Gage : danse 15 secondes en appel vidéo devant {toi}.",
+  "Gage : écris à {toi} le souvenir à deux que tu préfères, en détail.",
+  "Gage : à votre prochain rendez-vous, c'est toi qui invites {toi}.",
+  "Gage : envoie à {toi} 10 émojis qui résument ce que tu ressens pour lui ou elle, et explique-les.",
+  "Gage : tu dois appeler {toi} demain matin pour le ou la réveiller avec un mot doux.",
+];
+
+export function gagesFor(distance?: boolean) {
+  return distance ? DISTANCE_GAGES : GAGES;
+}
+
 
 export type Gender = "h" | "f" | "";
 
@@ -152,6 +231,7 @@ export function fill(text: string, moi: string, toi: string, g?: { addressee?: G
       .replaceAll("-t-il ou elle", f ? "-t-elle" : "-t-il")
       .replaceAll("chez lui ou chez elle", f ? "chez elle" : "chez lui")
       .replaceAll("de lui ou d'elle", f ? "d'elle" : "de lui")
+      .replaceAll("lui ou à elle", f ? "elle" : "lui")
       .replaceAll("lui ou elle", f ? "elle" : "lui")
       .replaceAll("il ou elle", f ? "elle" : "il")
       .replaceAll("Il ou elle", f ? "Elle" : "Il")

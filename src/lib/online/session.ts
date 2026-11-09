@@ -7,7 +7,11 @@ import { getBackend, type RoomData } from "@/lib/online/backend";
 export interface InitOpts {
   maxLevel: Level;
   starter: 0 | 1;
+  /** Mode Distance : contenus adaptés au jeu à distance */
+  distance?: boolean;
 }
+
+export type SessionMode = "local" | "duo" | "distance";
 
 /** Un jeu à deux = un état sérialisable + un réducteur pur. Le même code sert hors ligne et en ligne. */
 export interface GameModule<S, A> {
@@ -26,6 +30,8 @@ export interface Session<S, A> {
   /** Peut-on jouer pour ce joueur depuis ce téléphone ? */
   canAct: (player: 0 | 1) => boolean;
   online: boolean;
+  mode: SessionMode;
+  distance: boolean;
   partnerOnline: boolean;
   live: string | undefined;
   setLive: (live: string) => void;
@@ -43,6 +49,8 @@ export function useLocalSession<S, A>(module: GameModule<S, A>, opts: InitOpts, 
     act,
     canAct: () => true,
     online: false,
+    mode: "local",
+    distance: false,
     partnerOnline: true,
     live,
     setLive: setLiveState,
@@ -65,6 +73,7 @@ export function useOnlineSession<S, A>(module: GameModule<S, A>, room: RoomData,
   );
   const setLive = useCallback((live: string) => void getBackend().then((b) => b.setLive(code, live)), [code]);
   const partner = me === 0 ? p1 : p0;
+  const distance = !!(state as { distance?: boolean }).distance;
 
   return {
     me,
@@ -74,6 +83,8 @@ export function useOnlineSession<S, A>(module: GameModule<S, A>, room: RoomData,
     act,
     canAct: (player) => player === me,
     online: true,
+    mode: distance ? "distance" : "duo",
+    distance,
     partnerOnline: !!partner?.online,
     live: room.live,
     setLive,

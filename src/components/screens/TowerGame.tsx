@@ -3,8 +3,9 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GAGES, fill } from "@/data/cards";
-import { TOWER_ACTIONS, TOWER_FINAL_GAGES, shuffle, type TowerAction } from "@/data/tower";
-import { pick, vibrate } from "@/lib/deck";
+import { TOWER_ACTIONS, TOWER_FINAL_GAGES, type TowerAction } from "@/data/tower";
+import { vibrate } from "@/lib/deck";
+import { freshIndex, markSeen, orderFresh, pickFresh } from "@/lib/seen";
 import type { Settings } from "@/lib/db";
 import { sfx } from "@/lib/sound";
 import { formatTime, useChallengeTimer } from "@/lib/useChallengeTimer";
@@ -36,7 +37,7 @@ function hasWebGL() {
 export function TowerGame({ settings, onExit }: { settings: Settings; onExit: () => void }) {
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [resetKey, setResetKey] = useState(0);
-  const [actions, setActions] = useState<TowerAction[]>(() => shuffle(TOWER_ACTIONS).slice(0, BLOCKS));
+  const [actions, setActions] = useState<TowerAction[]>(() => orderFresh("tour", TOWER_ACTIONS, (a) => a.id).slice(0, BLOCKS));
   const [turn, setTurn] = useState(0);
   const [current, setCurrent] = useState<{ action: TowerAction; block: number } | null>(null);
   const [gage, setGage] = useState<string | null>(null);
@@ -71,6 +72,7 @@ export function TowerGame({ settings, onExit }: { settings: Settings; onExit: ()
   const onExtract = useCallback(
     (block: number) => {
       const action = actionsRef.current[block];
+      markSeen("tour", action.id);
       sfx.swoosh();
       setExtracted((n) => n + 1);
       setCurrent({ action, block });
@@ -85,7 +87,7 @@ export function TowerGame({ settings, onExit }: { settings: Settings; onExit: ()
     setCurrent(null);
     setGage(null);
     setLoser(t);
-    setFinalGage(fill(pick(TOWER_FINAL_GAGES), names[t], names[1 - t]));
+    setFinalGage(fill(pickFresh("tour-final", TOWER_FINAL_GAGES, (x) => x), names[t], names[1 - t]));
     setTimeout(() => {
       sfx.fail();
       setShowLoser(true);
@@ -110,12 +112,12 @@ export function TowerGame({ settings, onExit }: { settings: Settings; onExit: ()
   function refuse() {
     timer.stop();
     sfx.fail();
-    setGage(fill(pick(GAGES), moi, toi, g));
+    setGage(fill(GAGES[freshIndex("gages", GAGES.length)], moi, toi, g));
   }
 
   function replay() {
     sfx.swoosh();
-    setActions(shuffle(TOWER_ACTIONS).slice(0, BLOCKS));
+    setActions(orderFresh("tour", TOWER_ACTIONS, (a) => a.id).slice(0, BLOCKS));
     setResetKey((k) => k + 1);
     setTurn(loser === null ? 0 : 1 - loser);
     setLoser(null);

@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { GAGES, fill, type Gender } from "@/data/cards";
 import { LUDO_CAPTURE, LUDO_FINAL, LUDO_HOME, LUDO_HOT_CELL, LUDO_SIX, type LudoText } from "@/data/ludo";
-import { shuffle } from "@/data/tower";
 import { db, type Settings } from "@/lib/db";
-import { pick, vibrate } from "@/lib/deck";
+import { vibrate } from "@/lib/deck";
+import { freshIndex, markSeen, orderFresh, pickFresh } from "@/lib/seen";
 import { FINISH, applyMove, movablePawns, newPawns, pathOf, type Pawns } from "@/lib/ludo";
 import { sfx } from "@/lib/sound";
 import { formatTime, useChallengeTimer } from "@/lib/useChallengeTimer";
@@ -123,19 +123,19 @@ export function LudoGame({ settings, onExit }: { settings: Settings; onExit: () 
       if (result.captured.length) {
         sfx.fail();
         vibrate([60, 40, 60]);
-        queue.push({ kind: "capture", who: 1 - turn, text: pick(LUDO_CAPTURE) });
+        queue.push({ kind: "capture", who: 1 - turn, text: pickFresh("ludo_capture", LUDO_CAPTURE, (t) => t.id) });
       }
       if (result.hot) {
         sfx.sparkle();
-        queue.push({ kind: "hot", who: turn, options: shuffle(LUDO_HOT_CELL).slice(0, 2), chosen: null, refused: null });
+        queue.push({ kind: "hot", who: turn, options: orderFresh("ludo_hot", LUDO_HOT_CELL, (t) => t.id).slice(0, 2), chosen: null, refused: null });
       }
       if (result.reachedHome) {
         sfx.success();
-        queue.push({ kind: "home", who: turn, text: pick(LUDO_HOME) });
+        queue.push({ kind: "home", who: turn, text: pickFresh("ludo_home", LUDO_HOME, (t) => t.id) });
       }
       if (result.won) {
         setWinner(turn);
-        setFinalOptions(shuffle(LUDO_FINAL).slice(0, 3));
+        setFinalOptions(orderFresh("ludo_final", LUDO_FINAL, (t) => t.id).slice(0, 3));
         void db.ludo.delete("current");
         if (queue.length) {
           setEvents(queue);
@@ -149,7 +149,7 @@ export function LudoGame({ settings, onExit }: { settings: Settings; onExit: () 
         }
         return;
       }
-      if (value === 6) queue.push({ kind: "six", who: turn, text: pick(LUDO_SIX) });
+      if (value === 6) queue.push({ kind: "six", who: turn, text: pickFresh("ludo_six", LUDO_SIX, (t) => t.id) });
       if (queue.length) {
         setEvents(queue);
         startEvent(queue[0]);
@@ -190,6 +190,7 @@ export function LudoGame({ settings, onExit }: { settings: Settings; onExit: () 
 
   function chooseHot(option: LudoText) {
     sfx.click();
+    markSeen("ludo_hot", option.id);
     setEvents((list) => {
       const [first, ...rest] = list;
       if (first?.kind !== "hot") return list;
@@ -204,7 +205,7 @@ export function LudoGame({ settings, onExit }: { settings: Settings; onExit: () 
     setEvents((list) => {
       const [first, ...rest] = list;
       if (first?.kind !== "hot") return list;
-      return [{ ...first, refused: say(pick(GAGES), first.who) }, ...rest];
+      return [{ ...first, refused: say(GAGES[freshIndex("gages", GAGES.length)], first.who) }, ...rest];
     });
   }
 
@@ -282,7 +283,8 @@ export function LudoGame({ settings, onExit }: { settings: Settings; onExit: () 
                 type="button"
                 onClick={() => {
                   sfx.sparkle();
-                  setFinalChoice(o);
+                  markSeen("ludo_final", o.id);
+                setFinalChoice(o);
                 }}
                 className="brutal-sm press rounded-2xl bg-cream p-4 text-left text-[17px] font-bold leading-snug"
               >

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GAGES, fill } from "@/data/cards";
+import { fill, gagesFor } from "@/data/cards";
 import type { Hand, PpcAction, PpcState } from "@/lib/games/modules";
 import type { Session } from "@/lib/online/session";
 import { sfx } from "@/lib/sound";
@@ -90,7 +90,7 @@ export function PpcGame({ session, soundOn, onExit }: { session: Session<PpcStat
   const matchLoser = s.phase === "over" && s.last && s.last.winner !== null ? ((1 - s.last.winner) as 0 | 1) : null;
 
   return (
-    <GameFrame title="Pierre-Papier-Ciseaux" soundOn={soundOn} onExit={onExit} online={session.online} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
+    <GameFrame title="Pierre-Papier-Ciseaux" soundOn={soundOn} onExit={onExit} mode={session.mode} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
       <ScoreBar names={names} score={s.score} />
       <span className="text-center font-mono text-[13px] font-bold">
         MANCHE {s.round} · PREMIER À {s.target}
@@ -168,7 +168,7 @@ export function PpcGame({ session, soundOn, onExit }: { session: Session<PpcStat
                 <>
                   <span className="font-mono text-xs font-bold">FIN DU MATCH · GAGE POUR {names[matchLoser].toUpperCase()}</span>
                   <p className="text-[22px] font-extrabold leading-tight">
-                    {fill(GAGES[s.gageIdx], names[matchLoser], names[1 - matchLoser], { addressee: genders[matchLoser], other: genders[1 - matchLoser] })}
+                    {fill(gagesFor(s.distance)[s.gageIdx], names[matchLoser], names[1 - matchLoser], { addressee: genders[matchLoser], other: genders[1 - matchLoser] })}
                   </p>
                 </>
               )}

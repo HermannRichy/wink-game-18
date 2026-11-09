@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { GAGES, LEVEL_ORDER, fill, type Card, type Level } from "@/data/cards";
+import { GAGES, LEVEL_BG, LEVEL_LABEL, LEVEL_ORDER, fill, type Card } from "@/data/cards";
+import { freshIndex, markSeen } from "@/lib/seen";
 import { buildDeck, pick, vibrate } from "@/lib/deck";
 import { db, toggleFavorite, type Settings } from "@/lib/db";
 import { Mascot } from "@/components/Mascot";
@@ -11,8 +12,6 @@ import { sfx } from "@/lib/sound";
 
 const PREP_SECONDS = 10;
 
-const LEVEL_BG: Record<Level, string> = { doux: "bg-candy", coquin: "bg-passion", brulant: "bg-flame" };
-const LEVEL_LABEL: Record<Level, string> = { doux: "DOUX", coquin: "COQUIN", brulant: "BRÛLANT" };
 const KIND_LABEL: Record<Card["kind"], string> = { question: "QUESTION", defi: "DÉFI", joker: "JOKER" };
 const PLAYER_BG = ["bg-candy", "bg-flame"];
 
@@ -95,6 +94,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
     sfx.swoosh();
     vibrate(25);
     setFlipped(true);
+    if (card) markSeen("cartes", card.id);
     if (card?.seconds) setPrep(PREP_SECONDS);
   }
 
@@ -113,7 +113,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
       setAskPass(true);
     } else {
       sfx.fail();
-      setGage(fill(pick(GAGES), moi, toi, g));
+      setGage(fill(GAGES[freshIndex("gages", GAGES.length)], moi, toi, g));
     }
   }
 
@@ -328,7 +328,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
                   onClick={() => {
                     setAskPass(false);
                     sfx.fail();
-                    setGage(fill(pick(GAGES), moi, toi, g));
+                    setGage(fill(GAGES[freshIndex("gages", GAGES.length)], moi, toi, g));
                   }}
                   className="h-14 rounded-2xl border-[3px] border-ink text-base font-bold"
                 >

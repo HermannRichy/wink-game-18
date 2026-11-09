@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { LEVELS, type Gender, type Level } from "@/data/cards";
+import { LEVELS, LEVEL_BG, type Gender, type Level } from "@/data/cards";
 import { saveSettings, type Settings } from "@/lib/db";
 import { Screen, TopBar } from "@/components/ui";
 import { sfx } from "@/lib/sound";
 
-const LEVEL_BG: Record<Level, string> = { doux: "bg-candy", coquin: "bg-passion", brulant: "bg-flame" };
 
 function GenderPicker({ value, onChange, label }: { value: Gender; onChange: (g: Gender) => void; label: string }) {
   return (
@@ -34,7 +33,7 @@ function GenderPicker({ value, onChange, label }: { value: Gender; onChange: (g:
   );
 }
 
-export function Players({ settings, onDone, onBack }: { settings: Settings; onDone: () => void; onBack?: () => void }) {
+export function Players({ settings, onDone, onBack, onTour }: { settings: Settings; onDone: () => void; onBack?: () => void; onTour?: () => void }) {
   const [p1, setP1] = useState(settings.player1);
   const [p2, setP2] = useState(settings.player2);
   const [g1, setG1] = useState<Gender>(settings.player1Gender);
@@ -122,6 +121,18 @@ export function Players({ settings, onDone, onBack }: { settings: Settings; onDo
         >
           C'EST PARTI
         </button>
+        {onTour && (
+          <button
+            type="button"
+            onClick={() => {
+              sfx.click();
+              onTour();
+            }}
+            className="text-sm font-semibold underline"
+          >
+            Revoir la visite guidée
+          </button>
+        )}
       </form>
     </Screen>
   );

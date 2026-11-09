@@ -8,7 +8,7 @@ import { Mascot } from "@/components/Mascot";
 import { Icon, IconButton, SoundToggle } from "@/components/ui";
 import { sfx } from "@/lib/sound";
 
-export type PlayMode = "local" | "online";
+export type PlayMode = "local" | "duo" | "distance";
 
 const COMING = [
   { name: "Dés coquins", desc: "Un dé action, un dé partie du corps." },
@@ -16,8 +16,8 @@ const COMING = [
   { name: "Qui de nous deux ?", desc: "Votes secrets, révélation à deux." },
 ];
 
-function Badge({ children, tone = "ink" }: { children: React.ReactNode; tone?: "ink" | "hot" | "online" }) {
-  const cls = tone === "hot" ? "bg-passion text-ink" : tone === "online" ? "bg-ink text-pop" : "bg-cream text-ink";
+function Badge({ children, tone = "ink" }: { children: React.ReactNode; tone?: "ink" | "hot" | "duo" | "distance" }) {
+  const cls = tone === "hot" ? "bg-passion text-ink" : tone === "duo" ? "bg-ink text-pop" : tone === "distance" ? "bg-ink text-candy" : "bg-cream text-ink";
   return <span className={`rounded-full border-2 border-ink px-2 py-0.5 text-[10px] font-extrabold tracking-wide ${cls}`}>{children}</span>;
 }
 
@@ -49,7 +49,7 @@ export function Home({
 
   function open(g: GameInfo) {
     sfx.swoosh();
-    if (g.online) setChooser(g);
+    if (g.duo || g.distance) setChooser(g);
     else onPlay(g.id, "local");
   }
 
@@ -99,7 +99,7 @@ export function Home({
         }}
         className="brutal-sm press flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-ink text-base font-extrabold text-pop"
       >
-        <Icon name="users" size={20} /> REJOINDRE UNE PARTIE EN LIGNE
+        <Icon name="users" size={20} /> REJOINDRE UNE PARTIE AVEC UN CODE
       </button>
 
       <div className="flex items-baseline justify-between">
@@ -122,8 +122,9 @@ export function Home({
                   <span className="text-[13px] font-medium leading-snug">{g.desc}</span>
                   <span className="flex flex-wrap gap-1">
                     {g.hot && <Badge tone="hot">HOT</Badge>}
-                    {g.online && <Badge tone="online">EN LIGNE</Badge>}
-                    <Badge>HORS LIGNE</Badge>
+                    {g.duo && <Badge tone="duo">DUO</Badge>}
+                    {g.distance && <Badge tone="distance">DISTANCE</Badge>}
+                    <Badge>SANS INTERNET</Badge>
                   </span>
                 </span>
               </button>
@@ -163,30 +164,35 @@ export function Home({
             <h2 id="mode-title" className="text-[28px] font-black leading-none tracking-tight">
               Comment vous <span className="highlight">jouez ?</span>
             </h2>
-            <button
-              type="button"
-              onClick={() => {
-                sfx.click();
-                setChooser(null);
-                onPlay(chooser.id, "local");
-              }}
-              className="brutal-sm press flex flex-col items-start gap-0.5 rounded-2xl bg-pop p-4 text-left"
-            >
-              <span className="text-lg font-extrabold">Sur ce téléphone</span>
-              <span className="text-sm font-medium">On se le passe à tour de rôle. Marche sans connexion.</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                sfx.click();
-                setChooser(null);
-                onPlay(chooser.id, "online");
-              }}
-              className="brutal-sm press flex flex-col items-start gap-0.5 rounded-2xl bg-ink p-4 text-left text-cream"
-            >
-              <span className="text-lg font-extrabold text-pop">Chacun sur son téléphone</span>
-              <span className="text-sm font-medium">Je crée une partie en ligne et j'envoie le code. Connexion requise.</span>
-            </button>
+            {(
+              [
+                { mode: "local", show: true, title: "Un seul téléphone", desc: "Ensemble, on se le passe à tour de rôle. Marche sans internet.", cls: "bg-pop" },
+                { mode: "duo", show: !!chooser.duo, title: "Mode Duo", desc: "Ensemble, chacun son téléphone, côte à côte. Les gages se font en vrai.", cls: "bg-ink text-cream" },
+                {
+                  mode: "distance",
+                  show: !!chooser.distance,
+                  title: "Mode Distance",
+                  desc: "Chacun chez soi. Défis et gages par vocal, message ou appel vidéo.",
+                  cls: "bg-candy",
+                },
+              ] as const
+            )
+              .filter((o) => o.show)
+              .map((o) => (
+                <button
+                  key={o.mode}
+                  type="button"
+                  onClick={() => {
+                    sfx.click();
+                    setChooser(null);
+                    onPlay(chooser.id, o.mode);
+                  }}
+                  className={`brutal-sm press flex flex-col items-start gap-0.5 rounded-2xl p-4 text-left ${o.cls}`}
+                >
+                  <span className={`text-lg font-extrabold ${o.mode === "duo" ? "text-pop" : ""}`}>{o.title}</span>
+                  <span className="text-sm font-medium">{o.desc}</span>
+                </button>
+              ))}
             <button type="button" onClick={() => setChooser(null)} className="h-11 text-sm font-semibold underline">
               Annuler
             </button>

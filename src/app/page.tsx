@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, DEFAULT_SETTINGS } from "@/lib/db";
+import { db, DEFAULT_SETTINGS, saveSettings } from "@/lib/db";
+import { loadSeen } from "@/lib/seen";
+import { Tour } from "@/components/screens/Tour";
 import { useInstall } from "@/lib/install";
 import { setSoundEnabled } from "@/lib/sound";
 import { AgeGate } from "@/components/screens/AgeGate";
@@ -21,13 +23,20 @@ import type { GameId } from "@/data/games";
 type View =
   | { name: "home" }
   | { name: "settings" }
+  | { name: "tour" }
   | { name: "game"; game: GameId }
-  | { name: "online"; game?: GameId; code?: string };
+  | { name: "online"; game?: GameId; mode?: "duo" | "distance"; code?: string };
 
 export default function App() {
   const stored = useLiveQuery(async () => (await db.settings.get("main")) ?? null, []);
   const { ready, standalone } = useInstall();
   const [view, setView] = useState<View>({ name: "home" });
+  const [seenReady, setSeenReady] = useState(false);
+
+  // Mémoire anti-répétition chargée avant de jouer
+  useEffect(() => {
+    void loadSeen().then(() => setSeenReady(true));
+  }, []);
 
   // Lien d'invitation : /?join=CODE
   useEffect(() => {
@@ -51,7 +60,7 @@ export default function App() {
     if (settings) setSoundEnabled(settings.soundOn);
   }, [settings?.soundOn]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!settings || !ready) {
+  if (!settings || !ready || !seenReady) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-passion">
         <Mascot size={120} shadow={false} label="Chargement de Wink" />
@@ -61,15 +70,34 @@ export default function App() {
 
   // 1. Âge  2. Installation (seulement dans le navigateur)  3. Prénoms
   if (!settings.ageConfirmed) return <AgeGate />;
+  if (!settings.tourDone || view.name === "tour") {
+    return (
+      <Tour
+        onDone={() => {
+          void saveSettings({ tourDone: true });
+          if (view.name === "tour") setView({ name: "settings" });
+        }}
+      />
+    );
+  }
   if (!standalone && !settings.installSkipped) return <Install />;
   if (!settings.player1 || !settings.player2 || !settings.player1Gender || !settings.player2Gender) {
     return <Players settings={settings} onDone={() => setView((v) => (v.name === "online" ? v : { name: "home" }))} />;
   }
 
-  if (view.name === "settings") return <Players settings={settings} onDone={home} onBack={home} />;
+  if (view.name === "settings") return <Players settings={settings} onDone={home} onBack={home} onTour={() => setView({ name: "tour" })} />;
 
   if (view.name === "online") {
-    return <OnlineLobby key={view.code ?? view.game ?? "join"} settings={settings} create={view.game} initialCode={view.code} onExit={home} />;
+    return (
+      <OnlineLobby
+        key={view.code ?? (view.game ? `${view.game}-${view.mode}` : "join")}
+        settings={settings}
+        create={view.game}
+        mode={view.mode}
+        initialCode={view.code}
+        onExit={home}
+      />
+    );
   }
 
   if (view.name === "game") {
@@ -95,7 +123,7 @@ export default function App() {
   return (
     <Home
       settings={settings}
-      onPlay={(game, mode) => setView(mode === "online" ? { name: "online", game } : { name: "game", game })}
+      onPlay={(game, mode) => setView(mode === "local" ? { name: "game", game } : { name: "online", game, mode })}
       onJoin={() => setView({ name: "online" })}
       onSettings={() => setView({ name: "settings" })}
     />

@@ -15,6 +15,33 @@ const v = (id: string, level: Level, text: string): AovCard => ({ id, level, kin
 const a = (id: string, level: Level, text: string, seconds?: number): AovCard => ({ id, level, kind: "action", text, seconds });
 
 export const AOV: AovCard[] = [
+  // ——— Flirt : vérités ———
+  v("vf01", "flirt", "Qu'est-ce qui t'a attiré·e chez {toi} au tout début ?"),
+  v("vf02", "flirt", "Quelle est la qualité de {toi} que tu envies un peu ?"),
+  v("vf03", "flirt", "Tu as déjà espionné le profil de {toi} sur les réseaux ? Jusqu'où ?"),
+  v("vf04", "flirt", "Quel est le message de {toi} que tu as relu plusieurs fois ?"),
+  v("vf05", "flirt", "Quelle tenue de {toi} t'a le plus plu jusqu'ici ?"),
+  v("vf06", "flirt", "As-tu déjà fait semblant d'être occupé·e pour ne pas répondre trop vite à {toi} ?"),
+  v("vf07", "flirt", "Que penses-tu que {toi} pense de toi en secret ?"),
+  v("vf08", "flirt", "Quel est le meilleur moment passé avec {toi} jusqu'ici ?"),
+  v("vf09", "flirt", "Qu'est-ce qui te rend timide devant {toi} ?"),
+  v("vf10", "flirt", "Si tu devais résumer {toi} en un émoji, ce serait lequel ?"),
+  v("vf11", "flirt", "Quelle est la chose la plus mignonne que {toi} ait faite pour toi ?"),
+  v("vf12", "flirt", "As-tu déjà parlé de {toi} à tes amis ? Qu'as-tu dit ?"),
+  // ——— Flirt : actions ———
+  a("af01", "flirt", "Fais ton plus beau clin d'œil à {toi}."),
+  a("af02", "flirt", "Complimente {toi} sur trois choses qui ne sont pas physiques."),
+  a("af03", "flirt", "Fais une pose de mannequin et laisse {toi} te noter.", 15),
+  a("af04", "flirt", "Prends la main de {toi} et garde-la jusqu'à ton prochain tour."),
+  a("af05", "flirt", "Fais un bisou sur la joue de {toi}."),
+  a("af06", "flirt", "Drague {toi} avec ta meilleure phrase d'accroche.", 20),
+  a("af07", "flirt", "Fais deviner à {toi} une chanson d'amour en la fredonnant.", 30),
+  a("af08", "flirt", "Regarde {toi} dans les yeux pendant 15 secondes sans rire.", 15),
+  a("af09", "flirt", "Invente un surnom pour {toi} et utilise-le jusqu'à la fin de la partie."),
+  a("af10", "flirt", "Fais une petite danse de séduction ridicule pour {toi}.", 15),
+  a("af11", "flirt", "Écris un compliment à {toi} sur un papier et donne-le-lui."),
+  a("af12", "flirt", "Fais un câlin rapide à {toi}, puis fais comme si de rien n'était."),
+
   // ——— Doux : vérités ———
   v("vd01", "doux", "Quelle est la première chose que tu as aimée chez {toi} ?"),
   v("vd02", "doux", "Quel moment avec {toi} t'a fait le plus rire ?"),
@@ -95,6 +122,58 @@ export const AOV: AovCard[] = [
   a("ab10", "brulant", "Guide les mains de {toi} là où tu aimes être caressé·e, par-dessus les vêtements.", 20),
   a("ab11", "brulant", "Fais un suçon discret à {toi}, à l'endroit de son choix."),
   a("ab12", "brulant", "Fais une promesse très coquine à {toi} pour la fin de la soirée."),
+];
+
+/** Actions faisables à distance (Mode Distance), par niveau */
+const d = (id: string, level: Level, text: string, seconds?: number): AovCard => ({ id, level, kind: "action", text, seconds });
+
+export const AOV_DISTANCE: AovCard[] = [
+  // Flirt
+  d("xf01", "flirt", "Envoie à {toi} un vocal où tu lui fais ta meilleure phrase de drague."),
+  d("xf02", "flirt", "Envoie à {toi} ton selfie le plus charmeur."),
+  d("xf03", "flirt", "Envoie à {toi} trois émojis qui le ou la décrivent, puis explique-les."),
+  d("xf04", "flirt", "Change le nom de {toi} dans tes contacts pour un surnom mignon, et montre-le en capture."),
+  d("xf05", "flirt", "Envoie à {toi} une chanson qui te fait penser à lui ou à elle."),
+  d("xf06", "flirt", "Fais un clin d'œil à {toi} en appel vidéo.", 10),
+  d("xf07", "flirt", "Écris à {toi} un compliment de trois lignes, sans parler de son physique."),
+  d("xf08", "flirt", "Envoie à {toi} une photo de ce que tu vois par ta fenêtre, avec une légende romantique."),
+  // Doux
+  d("xd01", "doux", "Envoie un vocal de 20 secondes où tu racontes à {toi} ton souvenir préféré avec lui ou elle."),
+  d("xd02", "doux", "Appelle {toi} en vidéo et souris-lui sans parler pendant 15 secondes.", 15),
+  d("xd03", "doux", "Écris à {toi} ce que vous ferez la prochaine fois que vous vous verrez."),
+  d("xd04", "doux", "Envoie à {toi} une photo de toi quand tu étais enfant."),
+  d("xd05", "doux", "Chante le refrain de votre chanson en vocal pour {toi}."),
+  d("xd06", "doux", "Mets une photo de vous deux en fond d'écran et envoie la capture à {toi}."),
+  d("xd07", "doux", "Écris un mini-poème de 4 vers pour {toi}."),
+  d("xd08", "doux", "Envoie à {toi} un « bonne nuit » en vocal, version la plus tendre possible."),
+  // Coquin
+  d("xc01", "coquin", "Envoie à {toi} un vocal où tu murmures ce que tu aimerais lui faire en le ou la revoyant."),
+  d("xc02", "coquin", "Décris par message la tenue que tu aimerais voir porter à {toi} au prochain rendez-vous."),
+  d("xc03", "coquin", "Envoie à {toi} un selfie avec ton regard le plus séducteur."),
+  d("xc04", "coquin", "Écris à {toi} où tu l'embrasserais en premier s'il ou elle était là."),
+  d("xc05", "coquin", "En appel vidéo, fais une danse sensuelle de 15 secondes pour {toi}.", 15),
+  d("xc06", "coquin", "Envoie à {toi} un message coquin qu'il ou elle devra relire avant de dormir."),
+  d("xc07", "coquin", "Promets par écrit un massage à {toi} pour votre prochain rendez-vous. Il ou elle choisit la durée."),
+  d("xc08", "coquin", "Raconte à {toi} en vocal votre baiser le plus mémorable."),
+  // Brûlant
+  d("xb01", "brulant", "Envoie un vocal de 20 secondes où tu décris à {toi} votre prochaine nuit ensemble."),
+  d("xb02", "brulant", "Écris à {toi} ton fantasme du moment, en une phrase."),
+  d("xb03", "brulant", "Murmure en vocal à {toi} ce qui te manque le plus chez lui ou elle, physiquement."),
+  d("xb04", "brulant", "Fais une promesse très coquine à {toi} pour votre prochain rendez-vous. Elle est due."),
+  d("xb05", "brulant", "Décris par message à {toi}, étape par étape, comment tu le ou la déshabillerais."),
+  d("xb06", "brulant", "En appel vidéo, regarde {toi} dans les yeux et dis-lui ce que tu as envie de faire, sans rougir.", 20),
+  d("xb07", "brulant", "Envoie à {toi} une liste de trois choses que vous n'avez jamais faites et que tu aimerais essayer."),
+  d("xb08", "brulant", "Laisse {toi} choisir un défi coquin que tu devras faire au prochain rendez-vous."),
+];
+
+/** Défi à deux à distance (égalité au morpion, etc.) */
+export const DISTANCE_DUO: string[] = [
+  "Égalité : appel vidéo, et chacun fait un compliment à l'autre.",
+  "Égalité : chacun envoie à l'autre un vocal d'une phrase coquine.",
+  "Égalité : chacun envoie à l'autre son selfie le plus drôle.",
+  "Égalité : chacun écrit à l'autre ce qui lui manque le plus ce soir.",
+  "Égalité : chacun envoie à l'autre une chanson qui résume votre couple.",
+  "Égalité : chacun promet à l'autre un câlin de 5 minutes au prochain rendez-vous.",
 ];
 
 /** Défi à faire à deux (égalité au morpion, etc.). Pas de « tu » : s'adresse au couple. */

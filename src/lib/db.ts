@@ -12,6 +12,8 @@ export interface Settings {
   soundOn: boolean;
   /** Jeux mis en favori, affichés en tête de l'accueil */
   favoriteGames: string[];
+  /** Visite guidée vue ou passée */
+  tourDone: boolean;
   /** L'utilisateur a choisi de continuer dans le navigateur sans installer */
   installSkipped: boolean;
 }
@@ -33,11 +35,18 @@ export interface LudoSave {
   updatedAt: number;
 }
 
+export interface Seen {
+  /** « portée:identifiant », ex. « cartes:c14 » ou « gages:3 » */
+  key: string;
+  at: number;
+}
+
 export const db = new Dexie("wink") as Dexie & {
   settings: EntityTable<Settings, "id">;
   favorites: EntityTable<Favorite, "cardId">;
   quizPlayed: EntityTable<QuizPlayed, "questionId">;
   ludo: EntityTable<LudoSave, "id">;
+  seen: EntityTable<Seen, "key">;
 };
 
 db.version(1).stores({
@@ -50,6 +59,9 @@ db.version(2).stores({
 db.version(3).stores({
   ludo: "id",
 });
+db.version(4).stores({
+  seen: "key",
+});
 
 export const DEFAULT_SETTINGS: Settings = {
   id: "main",
@@ -61,6 +73,7 @@ export const DEFAULT_SETTINGS: Settings = {
   maxLevel: "coquin",
   soundOn: true,
   favoriteGames: [],
+  tourDone: false,
   installSkipped: false,
 };
 

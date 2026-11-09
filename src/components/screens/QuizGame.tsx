@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { fill, type Level } from "@/data/cards";
+import { LEVEL_BG, LEVEL_LABEL, fill } from "@/data/cards";
 import { quizFor } from "@/data/quiz";
 import { db, type Settings } from "@/lib/db";
 import { vibrate } from "@/lib/deck";
@@ -10,8 +10,7 @@ import { sfx } from "@/lib/sound";
 import { Icon, Screen, SoundToggle, TopBar } from "@/components/ui";
 import { Mascot } from "@/components/Mascot";
 
-const LEVEL_LABEL: Record<Level, string> = { doux: "DOUX", coquin: "COQUIN", brulant: "BRÛLANT" };
-const LEVEL_BADGE: Record<Level, string> = { doux: "bg-candy", coquin: "bg-passion", brulant: "bg-flame" };
+const LEVEL_BADGE = LEVEL_BG;
 const PLAYER_BG = ["bg-candy", "bg-flame"];
 
 type Mode = "random" | "manual";

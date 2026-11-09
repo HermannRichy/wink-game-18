@@ -1,9 +1,13 @@
-import { GAGES, LEVEL_ORDER, type Level } from "@/data/cards";
-import { AOV, DUO_CHALLENGES, type AovKind } from "@/data/aov";
+import { LEVEL_ORDER, gagesFor, type Level } from "@/data/cards";
+import { AOV, AOV_DISTANCE, DISTANCE_DUO, DUO_CHALLENGES, type AovKind } from "@/data/aov";
+import { freshIndex, isSeen } from "@/lib/seen";
 import type { GameModule, InitOpts } from "@/lib/online/session";
 
 const rnd = (n: number) => Math.floor(Math.random() * n);
 const other = (p: 0 | 1) => (1 - p) as 0 | 1;
+/** Gage pas encore vu, dans la bonne liste (sur place ou à distance) */
+const gageIdx = (distance?: boolean) => freshIndex(distance ? "gages-distance" : "gages", gagesFor(distance).length);
+export const duoChallenges = (distance?: boolean) => (distance ? DISTANCE_DUO : DUO_CHALLENGES);
 
 // ————————————————————— Action ou Vérité —————————————————————
 
@@ -16,22 +20,31 @@ export interface AovState {
   used: string[];
   count: number;
   maxLevel: Level;
+  distance?: boolean;
 }
 export type AovAction = { t: "choose"; kind: AovKind } | { t: "done" } | { t: "refuse" } | { t: "gageDone" };
+
+export function aovPool(distance?: boolean) {
+  // À distance : les vérités restent les mêmes, les actions sont adaptées
+  return distance ? [...AOV.filter((c) => c.kind === "verite"), ...AOV_DISTANCE] : AOV;
+}
 
 function pickAov(kind: AovKind, s: AovState) {
   const maxIdx = LEVEL_ORDER.indexOf(s.maxLevel);
   // L'intensité monte toutes les 6 cartes, sans dépasser le niveau max
   const reach = Math.min(maxIdx, Math.floor(s.count / 6));
-  let pool = AOV.filter((c) => c.kind === kind && LEVEL_ORDER.indexOf(c.level) <= reach && !s.used.includes(c.id));
-  if (pool.length === 0) pool = AOV.filter((c) => c.kind === kind && LEVEL_ORDER.indexOf(c.level) <= maxIdx);
+  const all = aovPool(s.distance).filter((c) => c.kind === kind);
+  const fresh = (c: (typeof all)[number]) => !s.used.includes(c.id) && !isSeen("aov", c.id);
+  let pool = all.filter((c) => LEVEL_ORDER.indexOf(c.level) <= reach && fresh(c));
+  if (pool.length === 0) pool = all.filter((c) => LEVEL_ORDER.indexOf(c.level) <= maxIdx && fresh(c));
+  if (pool.length === 0) pool = all.filter((c) => LEVEL_ORDER.indexOf(c.level) <= maxIdx);
   const top = pool.filter((c) => LEVEL_ORDER.indexOf(c.level) === reach);
   const from = top.length && Math.random() < 0.65 ? top : pool;
   return from[rnd(from.length)];
 }
 
 export const aovModule: GameModule<AovState, AovAction> = {
-  init: (o: InitOpts) => ({ turn: o.starter, phase: "choose", kind: null, cardId: null, gageIdx: 0, used: [], count: 0, maxLevel: o.maxLevel }),
+  init: (o: InitOpts) => ({ turn: o.starter, phase: "choose", kind: null, cardId: null, gageIdx: 0, used: [], count: 0, maxLevel: o.maxLevel, distance: o.distance }),
   reduce(s, a, actor) {
     if (actor !== s.turn) return s;
     switch (a.t) {
@@ -45,7 +58,7 @@ export const aovModule: GameModule<AovState, AovAction> = {
         return { ...s, phase: "choose", kind: null, cardId: null, turn: other(s.turn), count: s.count + 1 };
       case "refuse":
         if (s.phase !== "show") return s;
-        return { ...s, phase: "gage", gageIdx: rnd(GAGES.length) };
+        return { ...s, phase: "gage", gageIdx: gageIdx(s.distance) };
       case "gageDone":
         if (s.phase !== "gage") return s;
         return { ...s, phase: "choose", kind: null, cardId: null, turn: other(s.turn), count: s.count + 1 };
@@ -75,11 +88,12 @@ export interface MorpionState {
   score: [number, number];
   gageIdx: number;
   round: number;
+  distance?: boolean;
 }
 export type MorpionAction = { t: "play"; cell: number } | { t: "next" };
 
 export const morpionModule: GameModule<MorpionState, MorpionAction> = {
-  init: (o) => ({ board: Array(9).fill(null), turn: o.starter, starter: o.starter, winner: null, line: null, score: [0, 0], gageIdx: 0, round: 1 }),
+  init: (o) => ({ board: Array(9).fill(null), turn: o.starter, starter: o.starter, winner: null, line: null, score: [0, 0], gageIdx: 0, round: 1, distance: o.distance }),
   reduce(s, a, actor) {
     if (a.t === "next") {
       if (s.winner === null) return s;
@@ -93,9 +107,10 @@ export const morpionModule: GameModule<MorpionState, MorpionAction> = {
     if (line) {
       const score: [number, number] = [...s.score];
       score[actor] += 1;
-      return { ...s, board, line, winner: actor, score, gageIdx: rnd(GAGES.length) };
+      return { ...s, board, line, winner: actor, score, gageIdx: gageIdx(s.distance) };
     }
-    if (board.every((c) => c !== null)) return { ...s, board, winner: "draw", gageIdx: rnd(DUO_CHALLENGES.length) };
+    if (board.every((c) => c !== null))
+      return { ...s, board, winner: "draw", gageIdx: freshIndex(s.distance ? "duo-distance" : "duo", duoChallenges(s.distance).length) };
     return { ...s, board, turn: other(actor) };
   },
 };
@@ -115,11 +130,12 @@ export interface PpcState {
   gageIdx: number;
   /** Prêts pour la manche suivante (en ligne, les deux doivent valider) */
   ready: [boolean, boolean];
+  distance?: boolean;
 }
 export type PpcAction = { t: "pick"; hand: Hand } | { t: "continue" } | { t: "rematch" };
 
 export const ppcModule: GameModule<PpcState, PpcAction> = {
-  init: () => ({ picks: [null, null], score: [0, 0], round: 1, phase: "pick", last: null, target: 3, gageIdx: 0, ready: [false, false] }),
+  init: (o) => ({ picks: [null, null], score: [0, 0], round: 1, phase: "pick", last: null, target: 3, gageIdx: 0, ready: [false, false], distance: o.distance }),
   reduce(s, a, actor) {
     if (a.t === "pick") {
       if (s.phase !== "pick" || s.picks[actor]) return s;
@@ -131,7 +147,7 @@ export const ppcModule: GameModule<PpcState, PpcAction> = {
       const score: [number, number] = [...s.score];
       if (winner !== null) score[winner] += 1;
       const over = score[0] >= s.target || score[1] >= s.target;
-      return { ...s, picks, score, phase: over ? "over" : "reveal", last: { picks: [h0, h1], winner }, gageIdx: rnd(GAGES.length), ready: [false, false] };
+      return { ...s, picks, score, phase: over ? "over" : "reveal", last: { picks: [h0, h1], winner }, gageIdx: gageIdx(s.distance), ready: [false, false] };
     }
     if (a.t === "continue") {
       if (s.phase !== "reveal") return s;
@@ -139,7 +155,7 @@ export const ppcModule: GameModule<PpcState, PpcAction> = {
     }
     // rematch
     if (s.phase !== "over") return s;
-    return { ...ppcModule.init({ maxLevel: "doux", starter: 0 }) };
+    return ppcModule.init({ maxLevel: "doux", starter: 0, distance: s.distance });
   },
 };
 
@@ -177,7 +193,7 @@ export const verreModule: GameModule<VerreState, VerreAction> = {
   reduce(s, a, actor) {
     if (a.t === "next") return s.phase === "over" ? newVerre(other(s.starter), s.round + 1) : s;
     if (s.phase !== "pour" || actor !== s.turn) return s;
-    if (a.overflow) return { ...s, level: a.level, phase: "over", loser: actor, gageIdx: rnd(GAGES.length), pours: s.pours + 1 };
+    if (a.overflow) return { ...s, level: a.level, phase: "over", loser: actor, gageIdx: gageIdx(false), pours: s.pours + 1 };
     return { ...s, level: a.level, turn: other(actor), pours: s.pours + 1 };
   },
 };

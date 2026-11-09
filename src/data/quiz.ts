@@ -10,6 +10,28 @@ export interface QuizQuestion {
 const qz = (id: string, level: Level, text: string): QuizQuestion => ({ id, level, text });
 
 export const QUIZ: QuizQuestion[] = [
+  // ——— FLIRT ———
+  qz("qf01", "flirt", "{toi}, quel est le premier truc que tu as pensé en voyant {moi} ?"),
+  qz("qf02", "flirt", "{toi}, quel est ton type, physiquement ? {moi} est dedans ?"),
+  qz("qf03", "flirt", "{toi}, quel plat choisirais-tu pour impressionner {moi} ?"),
+  qz("qf04", "flirt", "{toi}, quelle est ta meilleure technique de drague ? Fais une démo."),
+  qz("qf05", "flirt", "{toi}, qu'est-ce qui te fait craquer chez quelqu'un en premier ?"),
+  qz("qf06", "flirt", "{toi}, quel film regarderais-tu avec {moi} pour une première soirée ?"),
+  qz("qf07", "flirt", "{toi}, plutôt message tous les jours ou appel tous les soirs ?"),
+  qz("qf08", "flirt", "{toi}, quel trait de caractère de {moi} t'intrigue le plus ?"),
+  qz("qf09", "flirt", "{toi}, si tu devais écrire la bio Instagram de {moi}, que mettrais-tu ?"),
+  qz("qf10", "flirt", "{toi}, à quel moment as-tu rougi devant {moi} ?"),
+  qz("qf11", "flirt", "{toi}, quel compliment de {moi} t'a le plus marqué·e ?"),
+  qz("qf12", "flirt", "{toi}, quelle activité aimerais-tu essayer avec {moi} pour la première fois ?"),
+  qz("qf13", "flirt", "{toi}, quelle est la chose la plus romantique qu'on ait faite pour toi ?"),
+  qz("qf14", "flirt", "{toi}, quel accessoire ou vêtement va le mieux à {moi} ?"),
+  qz("qf15", "flirt", "{toi}, que ferais-tu si {moi} t'invitait à danser là, maintenant ?"),
+  qz("qf16", "flirt", "{toi}, quelle question as-tu toujours voulu poser à {moi} ?"),
+  qz("qf17", "flirt", "{toi}, qu'est-ce qui te fait sourire quand tu reçois un message de {moi} ?"),
+  qz("qf18", "flirt", "{toi}, si {moi} était un parfum, ce serait quoi ?"),
+  qz("qf19", "flirt", "{toi}, quel est ton petit défaut que {moi} ne connaît pas encore ?"),
+  qz("qf20", "flirt", "{toi}, décris le rendez-vous parfait avec {moi} en trois mots."),
+
   // ——— DOUX ———
   qz("qd01", "doux", "{toi}, à quel moment as-tu su que tu tenais vraiment à {moi} ?"),
   qz("qd02", "doux", "{toi}, quelle est la chose la plus mignonne que {moi} fait sans s'en rendre compte ?"),

@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { GAGES, fill } from "@/data/cards";
-import { DUO_CHALLENGES } from "@/data/aov";
-import type { MorpionAction, MorpionState } from "@/lib/games/modules";
+import { fill, gagesFor } from "@/data/cards";
+import { duoChallenges, type MorpionAction, type MorpionState } from "@/lib/games/modules";
 import type { Session } from "@/lib/online/session";
 import { sfx } from "@/lib/sound";
 import { vibrate } from "@/lib/deck";
@@ -50,7 +49,7 @@ export function MorpionGame({ session, soundOn, onExit }: { session: Session<Mor
   const loser = s.winner === 0 || s.winner === 1 ? ((1 - s.winner) as 0 | 1) : null;
 
   return (
-    <GameFrame title="Morpion" soundOn={soundOn} onExit={onExit} online={session.online} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
+    <GameFrame title="Morpion" soundOn={soundOn} onExit={onExit} mode={session.mode} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
       <ScoreBar names={names} score={s.score} turn={s.winner === null ? s.turn : null} />
 
       <div className="flex items-center justify-between">
@@ -89,8 +88,8 @@ export function MorpionGame({ session, soundOn, onExit }: { session: Session<Mor
             <span className="font-mono text-xs font-bold">{s.winner === "draw" ? "MATCH NUL" : `${names[s.winner].toUpperCase()} GAGNE LA MANCHE`}</span>
             <p className="text-[24px] font-black leading-[1.1]">
               {s.winner === "draw"
-                ? DUO_CHALLENGES[s.gageIdx % DUO_CHALLENGES.length]
-                : fill(GAGES[s.gageIdx], names[loser!], names[s.winner], { addressee: genders[loser!], other: genders[s.winner] })}
+                ? duoChallenges(s.distance)[s.gageIdx % duoChallenges(s.distance).length]
+                : fill(gagesFor(s.distance)[s.gageIdx], names[loser!], names[s.winner], { addressee: genders[loser!], other: genders[s.winner] })}
             </p>
             {loser !== null && <span className="text-sm font-semibold">Gage pour {names[loser]}.</span>}
           </div>
