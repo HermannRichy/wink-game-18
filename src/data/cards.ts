@@ -153,6 +153,47 @@ export const CARDS: Card[] = [
   d("b28", "brulant", "Fais une promesse coquine à {toi} pour demain. Il ou elle a le droit de te la rappeler."),
   j("b29", "brulant", "ensemble", "Joker : la prochaine carte, {toi} et toi la jouez ensemble."),
   j("b30", "brulant", "passer", "Joker : tu le gardes. Il te permettra de refuser un défi sans gage."),
+  // ——— DOUX (suite) ———
+  q("d31", "doux", "Quelle est la chose que {toi} fait le matin et qui te fait sourire ?"),
+  q("d32", "doux", "Si vous aviez un chien ensemble, comment l'appelleriez-vous ? Mettez-vous d'accord."),
+  q("d33", "doux", "Quel est le plat que tu aimerais apprendre à cuisiner pour {toi} ?"),
+  q("d34", "doux", "Raconte le moment où tu t'es dit : « avec {toi}, c'est sérieux »."),
+  q("d35", "doux", "Quel est le défaut de {toi} que tu trouves finalement mignon ?"),
+  q("d36", "doux", "Quelle est la chose la plus folle que vous pourriez faire ensemble cette année ?"),
+  d("d37", "doux", "Fais une bataille de chatouilles de 15 secondes avec {toi}.", 15),
+  d("d38", "doux", "Raconte une blague à {toi}. S'il ou elle ne rit pas, tu lui dois un bisou."),
+  d("d39", "doux", "Fais un selfie avec {toi} en imitant votre émoji préféré."),
+  d("d40", "doux", "Donne à {toi} trois bisous papillon (avec les cils) sur la joue."),
+  d("d41", "doux", "Serre {toi} dans tes bras et balance-vous doucement en silence.", 20),
+  d("d42", "doux", "Écris ton prénom dans le dos de {toi} avec ton doigt. Il ou elle doit deviner."),
+
+  // ——— COQUIN (suite) ———
+  q("c31", "coquin", "Quelle est la chose la plus coquine que {toi} t'ait dite ?"),
+  q("c32", "coquin", "À quel moment de la journée as-tu le plus envie de {toi} ?"),
+  q("c33", "coquin", "Quel vêtement de {toi} aimerais-tu lui enlever en premier ?"),
+  q("c34", "coquin", "Où aimerais-tu un rendez-vous surprise rien que tous les deux ?"),
+  q("c35", "coquin", "Quel est le geste le plus sensuel que {toi} fait sans le savoir ?"),
+  q("c36", "coquin", "Tu préfères qu'on t'embrasse dans le cou ou sur les lèvres ? Montre."),
+  d("c37", "coquin", "Embrasse {toi} en commençant par le front, puis le nez, puis les lèvres."),
+  d("c38", "coquin", "Glisse ta main dans les cheveux de {toi} et approche-toi sans l'embrasser.", 15),
+  d("c39", "coquin", "Fais deviner à {toi} un mot coquin en le mimant.", 30),
+  d("c40", "coquin", "Masse le cou de {toi} du bout des doigts.", 45),
+  d("c41", "coquin", "Embrasse {toi} pendant 10 secondes, sans les mains.", 10),
+  d("c42", "coquin", "Chuchote à {toi} ton endroit préféré pour recevoir un bisou."),
+
+  // ——— BRÛLANT (suite) ———
+  q("b31", "brulant", "Quelle est la chose que {toi} fait qui te fait perdre tous tes moyens ?"),
+  q("b32", "brulant", "Quel est l'endroit le plus risqué où tu aimerais embrasser {toi} ?"),
+  q("b33", "brulant", "Quelle tenue de {toi} t'a déjà fait perdre la tête ?"),
+  q("b34", "brulant", "Plutôt prendre les commandes ou te laisser guider par {toi} ?"),
+  q("b35", "brulant", "Quel souvenir intime avec {toi} te revient le plus souvent ?"),
+  q("b36", "brulant", "Qu'aimerais-tu que {toi} ose ce soir ?"),
+  d("b37", "brulant", "Enlève un vêtement de {toi} uniquement avec les dents.", 45),
+  d("b38", "brulant", "Embrasse {toi} du cou jusqu'à l'épaule, très lentement.", 30),
+  d("b39", "brulant", "Laisse {toi} te bander les yeux et t'embrasser trois fois où il ou elle veut.", 45),
+  d("b40", "brulant", "Fais un massage du dos à {toi}, sous son haut.", 60),
+  d("b41", "brulant", "Dis à {toi}, les yeux dans les yeux, ce que tu vas lui faire tout à l'heure."),
+  d("b42", "brulant", "Assieds-toi sur {toi}, face à lui ou elle, et embrasse-le ou la.", 20),
 ];
 
 export const GAGES: string[] = [

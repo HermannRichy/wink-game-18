@@ -97,6 +97,47 @@ export const QUIZ: QuizQuestion[] = [
   qz("qb18", "brulant", "{toi}, quelle promesse coquine voudrais-tu que {moi} te fasse pour demain ?"),
   qz("qb19", "brulant", "{toi}, qu'est-ce qui te fait le plus d'effet : qu'on te dise ou qu'on te montre ?"),
   qz("qb20", "brulant", "{toi}, décris à {moi}, sans rougir, ce que tu as en tête là, tout de suite."),
+  // ——— DOUX (suite) ———
+  qz("qd21", "doux", "{toi}, quelle est la chose que {moi} dit souvent et que tu adores ?"),
+  qz("qd22", "doux", "{toi}, quel est le meilleur conseil que {moi} t'ait donné ?"),
+  qz("qd23", "doux", "{toi}, si tu devais offrir une journée parfaite à {moi}, à quoi ressemblerait-elle ?"),
+  qz("qd24", "doux", "{toi}, quelle est ta photo préférée de vous deux ? Pourquoi ?"),
+  qz("qd25", "doux", "{toi}, qu'est-ce que tu as appris grâce à {moi} ?"),
+  qz("qd26", "doux", "{toi}, quel est le petit rituel de couple que tu préfères ?"),
+  qz("qd27", "doux", "{toi}, quelle chanson danserais-tu avec {moi} à votre mariage ?"),
+  qz("qd28", "doux", "{toi}, quand as-tu été le plus fier ou la plus fière de {moi} ?"),
+  qz("qd29", "doux", "{toi}, qu'est-ce qui te manque le plus quand {moi} n'est pas là ?"),
+  qz("qd30", "doux", "{toi}, quel est le moment où tu t'es senti·e le plus aimé·e par {moi} ?"),
+  qz("qd31", "doux", "{toi}, qu'aimerais-tu que vous fassiez plus souvent ensemble ?"),
+  qz("qd32", "doux", "{toi}, quel mot résume le mieux votre couple ?"),
+
+  // ——— COQUIN (suite) ———
+  qz("qc21", "coquin", "{toi}, quelle est la tenue de {moi} que tu préférerais voir ce soir ?"),
+  qz("qc22", "coquin", "{toi}, quelle est la chose la plus osée que tu aies pensée en regardant {moi} ?"),
+  qz("qc23", "coquin", "{toi}, quel est le meilleur endroit pour un câlin surprise ?"),
+  qz("qc24", "coquin", "{toi}, si tu pouvais avoir {moi} rien que pour toi pendant une heure, que ferais-tu ?"),
+  qz("qc25", "coquin", "{toi}, quel bisou de {moi} préfères-tu : doux, fougueux ou surprise ?"),
+  qz("qc26", "coquin", "{toi}, à quel moment trouves-tu {moi} le plus sexy ?"),
+  qz("qc27", "coquin", "{toi}, quelle chanson mettrais-tu pour une soirée coquine avec {moi} ?"),
+  qz("qc28", "coquin", "{toi}, qu'est-ce que {moi} porte qui te rend fou ou folle ?"),
+  qz("qc29", "coquin", "{toi}, quel est le message le plus coquin que tu aies eu envie d'envoyer à {moi} ?"),
+  qz("qc30", "coquin", "{toi}, tu préfères les préliminaires longs ou les surprises spontanées ?"),
+  qz("qc31", "coquin", "{toi}, quelle partie de toi aimerais-tu que {moi} embrasse plus souvent ?"),
+  qz("qc32", "coquin", "{toi}, quel est ton petit fantasme romantique le plus sage ?"),
+
+  // ——— BRÛLANT (suite) ———
+  qz("qb21", "brulant", "{toi}, quel est le geste de {moi} qui t'excite instantanément ?"),
+  qz("qb22", "brulant", "{toi}, quel est l'endroit le plus fou où tu rêverais d'être seul·e avec {moi} ?"),
+  qz("qb23", "brulant", "{toi}, que voudrais-tu que {moi} te murmure pendant un moment intime ?"),
+  qz("qb24", "brulant", "{toi}, quelle est la chose que tu n'as jamais osé demander à {moi} ?"),
+  qz("qb25", "brulant", "{toi}, plutôt lumière tamisée ou noir complet ?"),
+  qz("qb26", "brulant", "{toi}, quelle est ta plus grosse envie avec {moi} pour ce soir ?"),
+  qz("qb27", "brulant", "{toi}, quel accessoire aimerais-tu tester avec {moi} ?"),
+  qz("qb28", "brulant", "{toi}, quel moment intime avec {moi} t'a le plus surpris·e ?"),
+  qz("qb29", "brulant", "{toi}, quelle partie du corps de {moi} pourrais-tu embrasser pendant des heures ?"),
+  qz("qb30", "brulant", "{toi}, si {moi} te laissait tout décider ce soir, que choisirais-tu ?"),
+  qz("qb31", "brulant", "{toi}, quel est ton meilleur souvenir de réveil avec {moi} ?"),
+  qz("qb32", "brulant", "{toi}, quelle règle aimerais-tu imposer à {moi} pour une nuit ?"),
 ];
 
 /** Mélange déterministe : la numérotation reste la même d'une partie à l'autre. */

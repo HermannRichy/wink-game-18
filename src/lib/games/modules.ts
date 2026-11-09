@@ -1,4 +1,6 @@
-import { LEVEL_ORDER, gagesFor, type Level } from "@/data/cards";
+import { CARDS, LEVEL_ORDER, gagesFor, type Card, type Level } from "@/data/cards";
+import { quizFor } from "@/data/quiz";
+import { buildDeck } from "@/lib/deck";
 import { AOV, AOV_DISTANCE, DISTANCE_DUO, DUO_CHALLENGES, type AovKind } from "@/data/aov";
 import { freshIndex, isSeen } from "@/lib/seen";
 import type { GameModule, InitOpts } from "@/lib/online/session";
@@ -195,5 +197,106 @@ export const verreModule: GameModule<VerreState, VerreAction> = {
     if (s.phase !== "pour" || actor !== s.turn) return s;
     if (a.overflow) return { ...s, level: a.level, phase: "over", loser: actor, gageIdx: gageIdx(false), pours: s.pours + 1 };
     return { ...s, level: a.level, turn: other(actor), pours: s.pours + 1 };
+  },
+};
+
+// ————————————————————— Cartes (Duo / Distance) —————————————————————
+
+
+/** Questions des Cartes qui ne marchent pas à distance */
+const NOT_REMOTE = new Set(["c10", "b06"]);
+
+/** Toutes les cartes jouables dans ce mode (à distance : questions + défis adaptés + jokers) */
+export function cartesPool(distance?: boolean): Card[] {
+  if (!distance) return CARDS;
+  const remoteDefis: Card[] = AOV_DISTANCE.map((c) => ({ id: c.id, level: c.level, kind: "defi", text: c.text, seconds: c.seconds }));
+  return [...CARDS.filter((c) => (c.kind !== "defi" && !NOT_REMOTE.has(c.id))), ...remoteDefis];
+}
+
+export interface CartesState {
+  deck: string[];
+  index: number;
+  turn: 0 | 1;
+  phase: "draw" | "show" | "gage" | "done";
+  gageIdx: number;
+  passes: [number, number];
+  together: boolean;
+  distance?: boolean;
+}
+export type CartesAction = { t: "draw" } | { t: "done" } | { t: "refuse" } | { t: "usePass" } | { t: "joker" } | { t: "gageDone" } | { t: "restart" };
+
+function cartesDeck(maxLevel: Level, distance?: boolean) {
+  return buildDeck(maxLevel, cartesPool(distance)).map((c) => c.id);
+}
+
+const nextCard = (s: CartesState, samePlayer = false): CartesState => {
+  const index = s.index + 1;
+  return { ...s, index, phase: index >= s.deck.length ? "done" : "draw", turn: samePlayer ? s.turn : other(s.turn) };
+};
+
+export const cartesModule: GameModule<CartesState, CartesAction> = {
+  init: (o) => ({ deck: cartesDeck(o.maxLevel, o.distance), index: 0, turn: o.starter, phase: "draw", gageIdx: 0, passes: [0, 0], together: false, distance: o.distance }),
+  reduce(s, a, actor) {
+    if (a.t === "restart") {
+      if (s.phase !== "done") return s;
+      return { ...s, index: 0, phase: "draw", passes: [0, 0], together: false };
+    }
+    if (actor !== s.turn) return s;
+    const card = cartesPool(s.distance).find((c) => c.id === s.deck[s.index]);
+    switch (a.t) {
+      case "draw":
+        return s.phase === "draw" ? { ...s, phase: "show" } : s;
+      case "done":
+        return s.phase === "show" ? { ...nextCard(s), together: false } : s;
+      case "refuse":
+        return s.phase === "show" ? { ...s, phase: "gage", gageIdx: gageIdx(s.distance) } : s;
+      case "usePass": {
+        if (s.phase !== "show" || s.passes[actor] < 1) return s;
+        const passes: [number, number] = [...s.passes];
+        passes[actor] -= 1;
+        return { ...nextCard({ ...s, passes }), together: false };
+      }
+      case "gageDone":
+        return s.phase === "gage" ? { ...nextCard(s), together: false } : s;
+      case "joker": {
+        if (s.phase !== "show" || card?.kind !== "joker") return s;
+        if (card.joker === "passer") {
+          const passes: [number, number] = [...s.passes];
+          passes[actor] += 1;
+          return nextCard({ ...s, passes });
+        }
+        if (card.joker === "ensemble") return { ...nextCard(s), together: true };
+        return nextCard(s, true);
+      }
+    }
+  },
+};
+
+// ————————————————————— Quiz (Duo / Distance) —————————————————————
+
+export interface QuizDuoState {
+  ids: string[];
+  played: string[];
+  turn: 0 | 1;
+  current: number | null;
+  distance?: boolean;
+}
+export type QuizDuoAction = { t: "open"; index: number } | { t: "answered" } | { t: "skip" } | { t: "reset" };
+
+export const quizDuoModule: GameModule<QuizDuoState, QuizDuoAction> = {
+  init: (o) => ({ ids: quizFor(o.maxLevel).map((q) => q.id), played: [], turn: o.starter, current: null, distance: o.distance }),
+  reduce(s, a, actor) {
+    if (a.t === "reset") return { ...s, played: [], current: null };
+    if (actor !== s.turn) return s;
+    switch (a.t) {
+      case "open":
+        if (s.current !== null || s.played.includes(s.ids[a.index])) return s;
+        return { ...s, current: a.index };
+      case "answered":
+        if (s.current === null) return s;
+        return { ...s, played: [...s.played, s.ids[s.current]], current: null, turn: other(s.turn) };
+      case "skip":
+        return { ...s, current: null };
+    }
   },
 };

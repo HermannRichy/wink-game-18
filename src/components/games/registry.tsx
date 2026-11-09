@@ -2,7 +2,9 @@
 
 import type { Gender, Level } from "@/data/cards";
 import type { GameId } from "@/data/games";
-import { aovModule, morpionModule, ppcModule, verreModule } from "@/lib/games/modules";
+import { aovModule, cartesModule, morpionModule, ppcModule, quizDuoModule, verreModule } from "@/lib/games/modules";
+import { CartesDuoGame } from "@/components/games/CartesDuoGame";
+import { QuizDuoGame } from "@/components/games/QuizDuoGame";
 import { useLocalSession, useOnlineSession, type GameModule, type Session } from "@/lib/online/session";
 import type { RoomData } from "@/lib/online/backend";
 import { AovGame } from "@/components/games/AovGame";
@@ -19,6 +21,9 @@ interface Entry {
 
 /** Jeux à deux jouables hors ligne et en ligne */
 export const DUO_GAMES: Partial<Record<GameId, Entry>> = {
+  // Cartes et Quiz : seulement en Duo / Distance (sur un seul téléphone, ce sont leurs écrans dédiés)
+  cartes: { module: cartesModule as GameModule<unknown, unknown>, Component: CartesDuoGame as unknown as Entry["Component"] },
+  quiz: { module: quizDuoModule as GameModule<unknown, unknown>, Component: QuizDuoGame as unknown as Entry["Component"] },
   aov: { module: aovModule as GameModule<unknown, unknown>, Component: AovGame as unknown as Entry["Component"] },
   morpion: { module: morpionModule as GameModule<unknown, unknown>, Component: MorpionGame as unknown as Entry["Component"] },
   ppc: { module: ppcModule as GameModule<unknown, unknown>, Component: PpcGame as unknown as Entry["Component"] },

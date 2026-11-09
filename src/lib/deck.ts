@@ -6,9 +6,9 @@ import { isSeen, resetScope } from "@/lib/seen";
  * chaque carte reçoit un score = indice du niveau + un aléa, puis on trie.
  * Les niveaux se mélangent donc aux transitions, sans dépasser le niveau max.
  */
-export function buildDeck(maxLevel: Level): Card[] {
+export function buildDeck(maxLevel: Level, source: Card[] = CARDS): Card[] {
   const maxIdx = LEVEL_ORDER.indexOf(maxLevel);
-  const pool = CARDS.filter((c) => LEVEL_ORDER.indexOf(c.level) <= maxIdx);
+  const pool = source.filter((c) => LEVEL_ORDER.indexOf(c.level) <= maxIdx);
   // Les cartes déjà jouées passent en fin de pioche ; tout joué : on repart de zéro
   let fresh = pool.filter((c) => !isSeen("cartes", c.id));
   if (fresh.length < 12) {

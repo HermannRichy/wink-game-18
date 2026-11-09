@@ -17,8 +17,8 @@ export interface GameInfo {
 }
 
 export const GAMES: GameInfo[] = [
-  { id: "cartes", name: "Cartes", desc: "Pioche, ose, recommence.", icon: "cards", bg: "bg-candy", ready: true },
-  { id: "quiz", name: "Quiz", desc: "Un numéro, une vérité.", icon: "quiz", bg: "bg-pop", ready: true },
+  { id: "cartes", name: "Cartes", desc: "Pioche, ose, recommence.", icon: "cards", bg: "bg-candy", duo: true, distance: true, ready: true },
+  { id: "quiz", name: "Quiz", desc: "Un numéro, une vérité.", icon: "quiz", bg: "bg-pop", duo: true, distance: true, ready: true },
   { id: "aov", name: "Action ou Vérité", desc: "Le classique, version couple.", icon: "aov", bg: "bg-passion", duo: true, distance: true, ready: true },
   { id: "morpion", name: "Morpion", desc: "Trois alignés, et le perdant paie.", icon: "grid", bg: "bg-cream", duo: true, distance: true, ready: true },
   { id: "ppc", name: "Pierre-Papier-Ciseaux", desc: "En 3 manches gagnantes. Gage au perdant.", icon: "hand", bg: "bg-candy", duo: true, distance: true, ready: true },
