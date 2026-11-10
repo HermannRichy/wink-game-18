@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, DEFAULT_SETTINGS, saveSettings } from "@/lib/db";
+import { lastRoom, sweepOldRooms, type KnownRoom } from "@/lib/online/last-room";
 import { track } from "@/lib/analytics";
 import { loadSeen } from "@/lib/seen";
 import { Tour } from "@/components/screens/Tour";
@@ -27,7 +28,7 @@ type View =
   | { name: "settings" }
   | { name: "tour" }
   | { name: "game"; game: GameId }
-  | { name: "online"; game?: GameId; mode?: "duo" | "distance"; code?: string };
+  | { name: "online"; game?: GameId; mode?: "duo" | "distance"; code?: string; resume?: boolean };
 
 export default function App() {
   const [busy, setBusy] = useState(false);
@@ -69,6 +70,15 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
     }
   }, []);
   const home = () => setView({ name: "home" });
+
+  // Partie à reprendre (même code) ; ménage des parties de plus de 24 h
+  const [resume, setResume] = useState<KnownRoom | null>(null);
+  useEffect(() => {
+    if (view.name === "home") setResume(lastRoom());
+  }, [view.name]);
+  useEffect(() => {
+    void sweepOldRooms().then(() => setResume(lastRoom()));
+  }, []);
   const settings = stored === undefined ? undefined : { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
 
   useEffect(() => {
@@ -105,11 +115,12 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
   if (view.name === "online") {
     return (
       <OnlineLobby
-        key={view.code ?? (view.game ? `${view.game}-${view.mode}` : "join")}
+        key={view.code ? `${view.code}-${view.resume ? "r" : "j"}` : (view.game ? `${view.game}-${view.mode}` : "join")}
         settings={settings}
         create={view.game}
         mode={view.mode}
         initialCode={view.code}
+        autoJoin={view.resume}
         onExit={home}
       />
     );
@@ -143,6 +154,8 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
         setView(mode === "local" ? { name: "game", game } : { name: "online", game, mode });
       }}
       onJoin={() => setView({ name: "online" })}
+      resume={resume ? { code: resume.code, game: resume.game } : null}
+      onResume={() => resume && setView({ name: "online", code: resume.code, resume: true })}
       onSettings={() => setView({ name: "settings" })}
     />
   );

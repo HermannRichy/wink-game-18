@@ -25,11 +25,15 @@ export function Home({
   settings,
   onPlay,
   onJoin,
+  resume,
+  onResume,
   onSettings,
 }: {
   settings: Settings;
   onPlay: (id: GameId, mode: PlayMode) => void;
   onJoin: () => void;
+  resume: { code: string; game: GameId } | null;
+  onResume: () => void;
   onSettings: () => void;
 }) {
   const levelName = LEVELS.find((l) => l.id === settings.maxLevel)?.name;
@@ -91,6 +95,18 @@ export function Home({
         </div>
       </section>
 
+      {resume && (
+        <button
+          type="button"
+          onClick={() => {
+            sfx.click();
+            onResume();
+          }}
+          className="brutal press flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-passion text-base font-extrabold"
+        >
+          <Icon name="users" size={20} /> REPRENDRE LA PARTIE · {resume.code}
+        </button>
+      )}
       <button
         type="button"
         onClick={() => {

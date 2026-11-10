@@ -210,7 +210,7 @@ function ChatPanel({
         <header className="flex items-center justify-between">
           <div className="flex flex-col">
             <span className="text-xl font-black">Chat avec {partnerName}</span>
-            <span className="text-[11px] font-bold">🔒 Chiffré de bout en bout · effacé à la fin de la partie</span>
+            <span className="text-[11px] font-bold">🔒 Chiffré de bout en bout · effacé quand la partie est terminée</span>
           </div>
           <button type="button" aria-label="Fermer le chat" onClick={onClose} className="brutal-sm press h-10 w-10 rounded-xl bg-pop text-lg font-black">
             ✕

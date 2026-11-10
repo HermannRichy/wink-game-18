@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { GAMES, type GameId } from "@/data/games";
 import type { Settings } from "@/lib/db";
 import { getBackend, newRoomCode, normalizeCode, type PlayerInfo } from "@/lib/online/backend";
+import { forgetRoom, rememberRoom } from "@/lib/online/last-room";
 import { useRoom } from "@/lib/online/session";
 import { sfx } from "@/lib/sound";
 import { vibrate } from "@/lib/deck";
@@ -16,6 +17,7 @@ export function OnlineLobby({
   create,
   mode = "duo",
   initialCode,
+  autoJoin,
   onExit,
 }: {
   settings: Settings;
@@ -24,6 +26,8 @@ export function OnlineLobby({
   /** Mode de la partie créée */
   mode?: "duo" | "distance";
   initialCode?: string;
+  /** Rejoint tout de suite avec le code (reprise d'une partie) */
+  autoJoin?: boolean;
   onExit: () => void;
 }) {
   const [code, setCode] = useState<string | null>(null);
@@ -32,6 +36,7 @@ export function OnlineLobby({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const room = useRoom(code);
   const presenceOff = useRef<(() => void) | null>(null);
   const gameInfo = GAMES.find((g) => g.id === (room?.game ?? create));
@@ -70,6 +75,7 @@ export function OnlineLobby({
         players: { p0: player },
         stateJson: JSON.stringify(entry.module.init({ maxLevel: settings.maxLevel, starter: Math.random() < 0.5 ? 0 : 1, distance: mode === "distance" })),
       });
+      rememberRoom(roomCode, create);
       setCode(roomCode);
       setMe(0);
       presenceOff.current = b.presence(roomCode, 0);
@@ -95,6 +101,7 @@ export function OnlineLobby({
       const res = await b.join(c, await myInfo());
       if (!res.ok) {
         sfx.fail();
+        if (res.reason === "missing") forgetRoom(c);
         setError(res.reason === "missing" ? "Aucune partie avec ce code. Vérifie-le." : "Cette partie est déjà complète.");
         return;
       }
@@ -122,19 +129,47 @@ export function OnlineLobby({
 
   useEffect(() => () => presenceOff.current?.(), []);
 
-  async function leave() {
+  // On retient la partie pour pouvoir la reprendre
+  const roomGame = room?.game;
+  useEffect(() => {
+    if (code && roomGame && me !== null) rememberRoom(code, roomGame);
+  }, [code, roomGame, me]);
+  useEffect(() => {
+    if (code && room === null) forgetRoom(code);
+  }, [code, room]);
+
+  // Reprise d'une partie : on rejoint tout de suite
+  const autoDone = useRef(false);
+  useEffect(() => {
+    if (autoJoin && initialCode && !autoDone.current) {
+      autoDone.current = true;
+      void join();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const partnerOnline = me !== null && !!room?.players[`p${1 - me}` as "p0" | "p1"]?.online;
+
+  /** Sortir : la partie reste ouverte si l'autre est encore là, sinon elle est supprimée */
+  async function leave(endForAll = false) {
     presenceOff.current?.();
     presenceOff.current = null;
-    if (code && me === 0) {
+    if (code && (endForAll || !partnerOnline)) {
       const b = await getBackend();
       void b.remove(code);
+      forgetRoom(code);
     }
     onExit();
   }
 
   // ——— Partie lancée ———
   if (room && me !== null && room.players.p0 && room.players.p1) {
-    return <OnlineDuoGame room={room} me={me} soundOn={settings.soundOn} onExit={leave} />;
+    return (
+      <>
+        <OnlineDuoGame room={room} me={me} soundOn={settings.soundOn} onExit={() => setConfirmLeave(true)} />
+        {confirmLeave && <LeaveDialog partnerOnline={partnerOnline} onStay={() => setConfirmLeave(false)} onLeave={() => leave(false)} onEnd={() => leave(true)} />}
+      </>
+    );
   }
 
   // La partie a été supprimée par l'hôte
@@ -159,7 +194,7 @@ export function OnlineLobby({
   return (
     <Screen>
       <TopBar
-        onBack={leave}
+        onBack={() => (code ? setConfirmLeave(true) : onExit())}
         title={create || code ? modeName : "Rejoindre"}
         right={
           create || code ? (
@@ -295,6 +330,33 @@ export function OnlineLobby({
           {error}
         </p>
       )}
+      {confirmLeave && <LeaveDialog partnerOnline={partnerOnline} onStay={() => setConfirmLeave(false)} onLeave={() => leave(false)} onEnd={() => leave(true)} />}
     </Screen>
+  );
+}
+
+function LeaveDialog({ partnerOnline, onStay, onLeave, onEnd }: { partnerOnline: boolean; onStay: () => void; onLeave: () => void; onEnd: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-5" onClick={onStay}>
+      <div role="dialog" aria-label="Quitter la partie" onClick={(e) => e.stopPropagation()} className="brutal flex w-full max-w-sm flex-col gap-3 rounded-[26px] bg-cream p-5 shadow-[6px_6px_0_#141414]">
+        <h2 className="text-2xl font-black leading-tight">Quitter la partie ?</h2>
+        <p className="text-sm font-semibold">
+          {partnerOnline
+            ? "La partie reste ouverte : tu pourras la reprendre depuis l'accueil, avec le même code."
+            : "L'autre joueur n'est pas connecté : la partie sera supprimée, avec les messages."}
+        </p>
+        <button type="button" onClick={onStay} className="brutal press h-[54px] rounded-[16px] bg-passion text-base font-extrabold">
+          RESTER
+        </button>
+        <button type="button" onClick={onLeave} className="h-[50px] rounded-[16px] border-[3px] border-ink bg-cream text-base font-bold">
+          {partnerOnline ? "Quitter, je reviens" : "Quitter et supprimer"}
+        </button>
+        {partnerOnline && (
+          <button type="button" onClick={onEnd} className="h-[50px] rounded-[16px] border-[3px] border-ink bg-flame text-base font-bold">
+            Terminer pour tous
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
