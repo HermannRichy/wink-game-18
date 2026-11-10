@@ -1,5 +1,6 @@
 "use client";
 
+import { ChatButton } from "@/components/online/ChatDock";
 import type { ReactNode } from "react";
 import { formatTime, type useChallengeTimer } from "@/lib/useChallengeTimer";
 import { sfx } from "@/lib/sound";
@@ -43,11 +44,16 @@ export function GameFrame({
         <SoundToggle on={soundOn} />
       </div>
       {mode !== "local" && (
-        <div className={`flex items-center justify-center gap-2 rounded-full border-[2.5px] border-ink px-3 py-1.5 text-xs font-extrabold ${partnerOnline ? "bg-cream" : "bg-pop"}`} role="status">
-          <span className={`h-2.5 w-2.5 rounded-full border-2 border-ink ${partnerOnline ? "bg-[#3DDC84]" : "bg-muted"}`} />
-          {partnerOnline
-            ? `${mode === "distance" ? "À DISTANCE" : "MODE DUO"} AVEC ${partnerName.toUpperCase()}`
-            : `${partnerName.toUpperCase()} N'EST PLUS CONNECTÉ·E…`}
+        <div className="flex items-center gap-2">
+          <div className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-[2.5px] border-ink px-3 py-1.5 text-xs font-extrabold ${partnerOnline ? "bg-cream" : "bg-pop"}`} role="status">
+            <span className={`h-2.5 w-2.5 shrink-0 rounded-full border-2 border-ink ${partnerOnline ? "bg-[#3DDC84]" : "bg-muted"}`} />
+            <span className="truncate">
+              {partnerOnline
+                ? `${mode === "distance" ? "À DISTANCE" : "MODE DUO"} AVEC ${partnerName.toUpperCase()}`
+                : `${partnerName.toUpperCase()} N'EST PLUS CONNECTÉ·E…`}
+            </span>
+          </div>
+          <ChatButton />
         </div>
       )}
       {children}

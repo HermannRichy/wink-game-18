@@ -18,6 +18,14 @@ export interface PlayerInfo {
   online: boolean;
 }
 
+/** Message chiffré : le serveur ne voit que du texte illisible */
+export interface ChatMsg {
+  f: 0 | 1;
+  iv: string;
+  ct: string;
+  t: number;
+}
+
 export interface RoomData {
   code: string;
   game: GameId;
@@ -26,6 +34,9 @@ export interface RoomData {
   stateJson: string;
   /** Données temps réel légères (ex. : niveau de l'eau pendant qu'on verse) */
   live?: string;
+  /** Clés publiques du chat (JWK en JSON) */
+  keys?: { p0?: string; p1?: string };
+  chat?: Record<string, ChatMsg>;
 }
 
 export type JoinResult = { ok: true; index: 0 | 1 } | { ok: false; reason: "missing" | "full" };
@@ -38,6 +49,8 @@ export interface Backend {
   /** Modifie l'état du jeu de façon atomique */
   transact(code: string, fn: (stateJson: string) => string): Promise<void>;
   setLive(code: string, live: string): void;
+  setChatKey(code: string, index: 0 | 1, pub: string): Promise<void>;
+  sendChat(code: string, msg: ChatMsg): Promise<void>;
   /** Marque le joueur en ligne, et hors ligne s'il perd la connexion */
   presence(code: string, index: 0 | 1): () => void;
   remove(code: string): Promise<void>;
@@ -135,6 +148,12 @@ async function firebaseBackend(): Promise<Backend> {
     setLive(code, live) {
       void db.set(db.ref(database, `rooms/${code}/live`), live);
     },
+    async setChatKey(code, index, pub) {
+      await db.set(db.ref(database, `rooms/${code}/keys/p${index}`), pub);
+    },
+    async sendChat(code, msg) {
+      await db.push(db.ref(database, `rooms/${code}/chat`), msg);
+    },
     presence(code, index) {
       const onlineRef = db.ref(database, `rooms/${code}/players/p${index}/online`);
       void db.set(onlineRef, true);
@@ -225,6 +244,18 @@ function localBackend(): Backend {
       const room = read(code);
       if (!room) return;
       room.live = live;
+      write(code, room);
+    },
+    async setChatKey(code, index, pub) {
+      const room = read(code);
+      if (!room) return;
+      room.keys = { ...room.keys, [`p${index}`]: pub };
+      write(code, room);
+    },
+    async sendChat(code, msg) {
+      const room = read(code);
+      if (!room) return;
+      room.chat = { ...room.chat, [`${msg.t}-${Math.random().toString(36).slice(2, 8)}`]: msg };
       write(code, room);
     },
     presence(code, index) {

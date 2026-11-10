@@ -100,7 +100,16 @@
   animation: float 3.2s ease-in-out infinite;
 }
 
+@keyframes float-up {
+  0% { opacity: 0; translate: 0 30px; scale: 0.6; }
+  20% { opacity: 1; scale: 1.15; }
+  100% { opacity: 0; translate: 0 -140px; scale: 1; }
+}
+.float-up {
+  animation: float-up 2.2s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .flip-inner { transition: none; }
-  .pop-in, .float { animation: none; }
+  .pop-in, .float, .float-up { animation: none; }
 }

@@ -7,6 +7,7 @@ import { CartesDuoGame } from "@/components/games/CartesDuoGame";
 import { QuizDuoGame } from "@/components/games/QuizDuoGame";
 import { useLocalSession, useOnlineSession, type GameModule, type Session } from "@/lib/online/session";
 import type { RoomData } from "@/lib/online/backend";
+import { ChatProvider } from "@/components/online/ChatDock";
 import { AovGame } from "@/components/games/AovGame";
 import { MorpionGame } from "@/components/games/MorpionGame";
 import { PpcGame } from "@/components/games/PpcGame";
@@ -55,5 +56,9 @@ export function OnlineDuoGame({ room, me, soundOn, onExit }: { room: RoomData; m
   const entry = DUO_GAMES[room.game]!;
   const session = useOnlineSession(entry.module, room, me);
   const C = entry.Component;
-  return <C session={session as unknown as Session<never, never>} soundOn={soundOn} onExit={onExit} />;
+  return (
+    <ChatProvider room={room} me={me} names={session.names}>
+      <C session={session as unknown as Session<never, never>} soundOn={soundOn} onExit={onExit} />
+    </ChatProvider>
+  );
 }

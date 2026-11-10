@@ -13,31 +13,6 @@ import { Icon, Screen, TopBar } from "@/components/ui";
 
 const SITE = "https://wink.hermannrichy.site";
 
-function IdentityPicker({ settings, who, onChange }: { settings: Settings; who: 0 | 1; onChange: (w: 0 | 1) => void }) {
-  const names = [settings.player1, settings.player2];
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-sm font-bold">Sur ce téléphone, tu es :</span>
-      <div role="group" aria-label="Qui es-tu ?" className="grid grid-cols-2 gap-2">
-        {([0, 1] as const).map((i) => (
-          <button
-            key={i}
-            type="button"
-            aria-pressed={who === i}
-            onClick={() => {
-              sfx.click();
-              onChange(i);
-            }}
-            className={`h-12 rounded-xl border-[3px] border-ink text-base font-extrabold ${who === i ? "bg-ink text-cream" : "bg-cream"}`}
-          >
-            {names[i]}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function OnlineLobby({
   settings,
   create,
@@ -53,7 +28,6 @@ export function OnlineLobby({
   initialCode?: string;
   onExit: () => void;
 }) {
-  const [who, setWho] = useState<0 | 1>(create ? 0 : 1);
   const [code, setCode] = useState<string | null>(null);
   const [input, setInput] = useState(initialCode ? normalizeCode(initialCode) : "");
   const [me, setMe] = useState<0 | 1 | null>(null);
@@ -76,8 +50,8 @@ export function OnlineLobby({
     const b = await getBackend();
     return {
       uid: await b.uid(),
-      name: who === 0 ? settings.player1 : settings.player2,
-      gender: who === 0 ? settings.player1Gender : settings.player2Gender,
+      name: settings.player1,
+      gender: settings.player1Gender,
       online: true,
     };
   };
@@ -208,7 +182,6 @@ export function OnlineLobby({
               ? "Chacun chez soi : tu crées la partie et tu envoies le code. Les défis se font par vocal, message ou appel vidéo. Connexion internet requise."
               : "Ensemble, au même endroit : chacun joue sur son téléphone, et les gages se font en vrai 😏. Connexion internet requise."}
           </p>
-          <IdentityPicker settings={settings} who={who} onChange={setWho} />
           <button type="button" disabled={busy} onClick={host} className="brutal press mt-auto h-[60px] rounded-[18px] bg-passion text-lg font-extrabold disabled:opacity-60">
             {busy ? "CRÉATION…" : "CRÉER LA PARTIE"}
           </button>
@@ -254,7 +227,7 @@ export function OnlineLobby({
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 text-center">
-              <p className="text-base font-bold">Montre ce code à {who === 0 ? settings.player2 : settings.player1}, à côté de toi.</p>
+              <p className="text-base font-bold">Montre ce code à ton ou ta partenaire, à côté de toi.</p>
               <button
                 type="button"
                 onClick={async () => {
@@ -274,7 +247,7 @@ export function OnlineLobby({
           )}
           <div className="mt-auto flex flex-col items-center gap-3 text-center">
             <Mascot size={110} interactive className="float" />
-            <p className="text-base font-bold">En attente de {who === 0 ? settings.player2 : settings.player1}…</p>
+            <p className="text-base font-bold">En attente de ton ou ta partenaire…</p>
             <p className="text-xs font-medium">
               La partie démarre toute seule dès que l'autre entre le code dans « Rejoindre une partie avec un code ».
             </p>
@@ -307,7 +280,6 @@ export function OnlineLobby({
               className="brutal h-16 rounded-2xl bg-pop px-4 text-center font-mono text-[34px] font-bold tracking-[0.2em] placeholder:text-ink/30"
             />
           </label>
-          <IdentityPicker settings={settings} who={who} onChange={setWho} />
           <button type="submit" disabled={busy || input.length !== 5} className="brutal press mt-auto h-[60px] rounded-[18px] bg-passion text-lg font-extrabold disabled:opacity-60">
             {busy ? "CONNEXION…" : "REJOINDRE"}
           </button>

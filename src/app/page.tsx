@@ -43,7 +43,9 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
   const stored = useLiveQuery(async () => (await db.settings.get("main")) ?? null, []);
   const { ready, standalone } = useInstall();
   const [view, setView] = useState<View>({ name: "home" });
-  useEffect(() => onBusy(view.name === "game" || view.name === "online"), [view.name, onBusy]);
+  useEffect(() => {
+    onBusy(view.name === "game" || view.name === "online");
+  }, [view.name, onBusy]);
   const [seenReady, setSeenReady] = useState(false);
 
   // Mémoire anti-répétition chargée avant de jouer

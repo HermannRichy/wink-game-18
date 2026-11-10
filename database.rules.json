@@ -20,6 +20,19 @@
             "$other": { ".validate": false }
           }
         },
+        "keys": {
+          "$p": { ".validate": "($p === 'p0' || $p === 'p1') && newData.isString() && newData.val().length < 500" }
+        },
+        "chat": {
+          "$id": {
+            ".validate": "newData.hasChildren(['f', 'iv', 'ct', 't']) && (newData.child('f').val() === 0 || newData.child('f').val() === 1) && root.child('rooms/' + $code + '/players/p' + newData.child('f').val() + '/uid').val() === auth.uid",
+            "f": { ".validate": "newData.isNumber()" },
+            "iv": { ".validate": "newData.isString() && newData.val().length < 40" },
+            "ct": { ".validate": "newData.isString() && newData.val().length < 1500" },
+            "t": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
         "$other": { ".validate": false }
       }
     }
