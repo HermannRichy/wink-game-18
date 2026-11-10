@@ -11,8 +11,6 @@ import { DUO_GAMES, OnlineDuoGame } from "@/components/games/registry";
 import { Mascot } from "@/components/Mascot";
 import { Icon, Screen, TopBar } from "@/components/ui";
 
-const SITE = "https://wink.hermannrichy.site";
-
 export function OnlineLobby({
   settings,
   create,
@@ -156,8 +154,7 @@ export function OnlineLobby({
     );
   }
 
-  const link = code ? `${SITE}/?join=${code}` : "";
-  const shareText = code ? `Viens jouer à ${gameInfo?.name ?? "Wink"} avec moi sur Wink 😏 Code : ${code} ${link}` : "";
+  const shareText = code ? `Viens jouer à ${gameInfo?.name ?? "Wink"} avec moi sur Wink 😏\nOuvre Wink, touche « Rejoindre une partie avec un code » et entre : ${code}\n(Pas encore Wink ? wink.hermannrichy.site)` : "";
 
   return (
     <Screen>
@@ -211,7 +208,7 @@ export function OnlineLobby({
                 onClick={async () => {
                   sfx.click();
                   try {
-                    if (navigator.share) await navigator.share({ title: "Wink", text: shareText, url: link });
+                    if (navigator.share) await navigator.share({ title: "Wink", text: shareText });
                     else {
                       await navigator.clipboard.writeText(shareText);
                       setCopied(true);
