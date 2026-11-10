@@ -64,7 +64,7 @@ export function Install() {
           ) : isIos ? (
             <ol className="flex flex-col gap-2.5">
               <Step n={1}>
-                Dans Safari, touche <Icon name="share" size={18} /> <strong>Partager</strong>
+                Dans Safari, touche <strong>⋯</strong> à côté de la barre d'adresse, puis <Icon name="share" size={18} /> <strong>Partager</strong>
               </Step>
               <Step n={2}>
                 Choisis <Icon name="plus" size={18} /> <strong>Sur l'écran d'accueil</strong>
