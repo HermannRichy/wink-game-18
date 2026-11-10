@@ -15,6 +15,7 @@ import { CardsGame } from "@/components/screens/CardsGame";
 import { QuizGame } from "@/components/screens/QuizGame";
 import { TowerGame } from "@/components/screens/TowerGame";
 import { LudoGame } from "@/components/screens/LudoGame";
+import { UpdateWatcher } from "@/components/UpdateWatcher";
 import { Mascot } from "@/components/Mascot";
 import { LocalDuoGame, DUO_GAMES } from "@/components/games/registry";
 import { OnlineLobby } from "@/components/online/OnlineLobby";
@@ -28,9 +29,20 @@ type View =
   | { name: "online"; game?: GameId; mode?: "duo" | "distance"; code?: string };
 
 export default function App() {
+  const [busy, setBusy] = useState(false);
+  return (
+    <>
+      <AppInner onBusy={setBusy} />
+      <UpdateWatcher busy={busy} />
+    </>
+  );
+}
+
+function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
   const stored = useLiveQuery(async () => (await db.settings.get("main")) ?? null, []);
   const { ready, standalone } = useInstall();
   const [view, setView] = useState<View>({ name: "home" });
+  useEffect(() => onBusy(view.name === "game" || view.name === "online"), [view.name, onBusy]);
   const [seenReady, setSeenReady] = useState(false);
 
   // Mémoire anti-répétition chargée avant de jouer
