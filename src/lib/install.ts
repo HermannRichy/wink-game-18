@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { useEffect, useState } from "react";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -21,6 +22,7 @@ if (typeof window !== "undefined") {
   });
   window.addEventListener("appinstalled", () => {
     installed = true;
+    track("pwa_install");
     deferred = null;
     notify();
   });

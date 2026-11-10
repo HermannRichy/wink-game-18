@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, DEFAULT_SETTINGS, saveSettings } from "@/lib/db";
+import { track } from "@/lib/analytics";
 import { loadSeen } from "@/lib/seen";
 import { Tour } from "@/components/screens/Tour";
 import { useInstall } from "@/lib/install";
@@ -135,7 +136,10 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
   return (
     <Home
       settings={settings}
-      onPlay={(game, mode) => setView(mode === "local" ? { name: "game", game } : { name: "online", game, mode })}
+      onPlay={(game, mode) => {
+        track("game_start", { game, mode });
+        setView(mode === "local" ? { name: "game", game } : { name: "online", game, mode });
+      }}
       onJoin={() => setView({ name: "online" })}
       onSettings={() => setView({ name: "settings" })}
     />
