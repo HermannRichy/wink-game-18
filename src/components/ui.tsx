@@ -2,9 +2,15 @@
 
 import type { ReactNode } from "react";
 
-type IconName = "aov" | "grid" | "hand" | "glass" | "star" | "starFill" | "users" | "copy" | "soundOn" | "soundOff" | "back" | "settings" | "cards" | "quiz" | "dice" | "tower" | "wifi" | "timer" | "heart" | "heartFill" | "share" | "lock" | "plus";
+type IconName = "aov" | "grid" | "hand" | "glass" | "star" | "starFill" | "users" | "copy" | "soundOn" | "soundOff" | "back" | "settings" | "cards" | "quiz" | "dice" | "tower" | "wifi" | "timer" | "heart" | "heartFill" | "share" | "lock" | "plus" | "chat";
 
 const PATHS: Record<IconName, ReactNode> = {
+  chat: (
+    <>
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4h0A2.5 2.5 0 0 1 4 13.5z" />
+      <path d="M8.5 8.5h7M8.5 11.5h4" />
+    </>
+  ),
   aov: (
     <>
       <path d="M9.5 9a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1 1-1.1 1.8v.5" />

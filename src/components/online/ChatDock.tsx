@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { getBackend, type RoomData } from "@/lib/online/backend";
 import { decryptText, deriveShared, encryptText, getMyKeys, type MyKeys } from "@/lib/online/chat-crypto";
 import { sfx } from "@/lib/sound";
+import { Icon } from "@/components/ui";
 
 const MAX = 300;
 const REACTIONS = ["😏", "🔥", "😂", "😳", "❤️", "😈", "👏"];
@@ -34,7 +35,7 @@ export function ChatButton() {
       onClick={c.open}
       className="brutal-sm press relative flex h-9 shrink-0 items-center gap-1 rounded-full bg-pop px-3 text-xs font-extrabold"
     >
-      💬 CHAT
+      <Icon name="chat" size={18} /> CHAT
       {c.unread > 0 && (
         <span className="absolute -right-1.5 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-passion px-1 text-[11px] font-black">{c.unread}</span>
       )}
