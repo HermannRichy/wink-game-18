@@ -53,12 +53,20 @@ export function LocalDuoGame({
   return <C session={session as unknown as Session<never, never>} soundOn={soundOn} onExit={onExit} />;
 }
 
+function isDistance(room: RoomData) {
+  try {
+    return !!JSON.parse(room.stateJson).distance;
+  } catch {
+    return false;
+  }
+}
+
 export function OnlineDuoGame({ room, me, soundOn, onExit }: { room: RoomData; me: 0 | 1; soundOn: boolean; onExit: () => void }) {
   const entry = DUO_GAMES[room.game]!;
   const session = useOnlineSession(entry.module, room, me);
   const C = entry.Component;
   return (
-    <ChatProvider room={room} me={me} names={session.names}>
+    <ChatProvider room={room} me={me} names={session.names} distance={isDistance(room)}>
       <ConnectionBanner />
       <C session={session as unknown as Session<never, never>} soundOn={soundOn} onExit={onExit} />
     </ChatProvider>

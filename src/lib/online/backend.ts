@@ -37,6 +37,10 @@ export interface RoomData {
   /** Clés publiques du chat (JWK en JSON) */
   keys?: { p0?: string; p1?: string };
   chat?: Record<string, ChatMsg>;
+  /** « écrit… » : valeur qui change à chaque frappe (aucun contenu) */
+  typing?: { p0?: number; p1?: number };
+  /** Dernier message de l'autre vu par ce joueur (horodatage du message) */
+  seen?: { p0?: number; p1?: number };
 }
 
 export type JoinResult =
@@ -52,6 +56,8 @@ export interface Backend {
   setLive(code: string, live: string): void;
   setChatKey(code: string, index: 0 | 1, pub: string): Promise<void>;
   sendChat(code: string, msg: ChatMsg): Promise<void>;
+  setTyping(code: string, index: 0 | 1): void;
+  setSeen(code: string, index: 0 | 1, t: number): void;
   /** Marque le joueur en ligne, et hors ligne s'il perd la connexion */
   presence(code: string, index: 0 | 1): () => void;
   remove(code: string): Promise<void>;
@@ -203,6 +209,12 @@ async function firebaseBackend(): Promise<Backend> {
     async sendChat(code, msg) {
       await db.push(db.ref(database, `rooms/${code}/chat`), msg);
     },
+    setTyping(code, index) {
+      void db.set(db.ref(database, `rooms/${code}/typing/p${index}`), Date.now());
+    },
+    setSeen(code, index, t) {
+      void db.set(db.ref(database, `rooms/${code}/seen/p${index}`), t);
+    },
     presence(code, index) {
       const onlineRef = db.ref(
         database,
@@ -325,6 +337,18 @@ function localBackend(): Backend {
       const room = read(code);
       if (!room) return;
       room.keys = { ...room.keys, [`p${index}`]: pub };
+      write(code, room);
+    },
+    setTyping(code, index) {
+      const room = read(code);
+      if (!room) return;
+      room.typing = { ...room.typing, [`p${index}`]: Date.now() };
+      write(code, room);
+    },
+    setSeen(code, index, t) {
+      const room = read(code);
+      if (!room) return;
+      room.seen = { ...room.seen, [`p${index}`]: t };
       write(code, room);
     },
     async sendChat(code, msg) {
