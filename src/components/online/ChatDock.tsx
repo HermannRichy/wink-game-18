@@ -474,6 +474,36 @@ function ChatPanel({
             const isSel = selected === m.id;
             return (
               <div key={m.id} className={`flex flex-col gap-1 ${mineMsg ? "items-end" : "items-start"}`}>
+                {isSel && m.text && (
+                  <span ref={(el) => el?.scrollIntoView({ block: "nearest" })} className="brutal-sm flex flex-wrap items-center gap-1 rounded-2xl bg-cream p-1.5">
+                    {MSG_REACTIONS.map((e) => (
+                      <button
+                        key={e}
+                        type="button"
+                        aria-label={`Réagir avec ${e}`}
+                        onClick={() => {
+                          sfx.click();
+                          void onSend({ k: "e", x: e, to: m.id });
+                          setSelected(null);
+                        }}
+                        className="h-9 w-9 text-xl"
+                      >
+                        {e}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplyTo({ id: m.id, text: m.kind === "s" ? `🖼 ${STICKER_LABEL}` : m.text!.slice(0, 80), from: m.from });
+                        setSelected(null);
+                        input.current?.focus();
+                      }}
+                      className="h-9 rounded-xl border-2 border-ink bg-pop px-2.5 text-xs font-extrabold"
+                    >
+                      Répondre
+                    </button>
+                  </span>
+                )}
                 <button
                   type="button"
                   aria-label="Répondre ou réagir à ce message"
@@ -507,36 +537,6 @@ function ChatPanel({
                         {n > 1 ? ` ${n}` : ""}
                       </span>
                     ))}
-                  </span>
-                )}
-                {isSel && m.text && (
-                  <span className="brutal-sm flex flex-wrap items-center gap-1 rounded-2xl bg-cream p-1.5">
-                    {MSG_REACTIONS.map((e) => (
-                      <button
-                        key={e}
-                        type="button"
-                        aria-label={`Réagir avec ${e}`}
-                        onClick={() => {
-                          sfx.click();
-                          void onSend({ k: "e", x: e, to: m.id });
-                          setSelected(null);
-                        }}
-                        className="h-9 w-9 text-xl"
-                      >
-                        {e}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setReplyTo({ id: m.id, text: m.kind === "s" ? `🖼 ${STICKER_LABEL}` : m.text!.slice(0, 80), from: m.from });
-                        setSelected(null);
-                        input.current?.focus();
-                      }}
-                      className="h-9 rounded-xl border-2 border-ink bg-pop px-2.5 text-xs font-extrabold"
-                    >
-                      Répondre
-                    </button>
                   </span>
                 )}
                 {m.id === lastMine?.id && pending.length === 0 && <span className="text-[11px] font-bold">{partnerSeen >= m.t ? "Vu ✓✓" : "Envoyé ✓"}</span>}
@@ -660,12 +660,12 @@ function ChatPanel({
           ))}
           <button
             type="button"
-            aria-label="Plus d'emojis"
+            aria-label="Emojis et autocollants"
             aria-pressed={emojis}
             onClick={() => setEmojis((v) => !v)}
-            className={`brutal-sm press flex aspect-square items-center justify-center rounded-xl text-[21px] ${emojis ? "bg-pop" : "bg-cream"}`}
+            className={`brutal-sm press flex aspect-square items-center justify-center rounded-xl ${emojis ? "bg-passion text-ink" : "bg-ink text-pop"}`}
           >
-            😊
+            <Icon name="plus" size={24} stroke={3.2} className={`transition-transform ${emojis ? "rotate-45" : ""}`} />
           </button>
         </div>
 
