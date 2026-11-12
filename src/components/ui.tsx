@@ -2,9 +2,22 @@
 
 import type { ReactNode } from "react";
 
-type IconName = "aov" | "grid" | "hand" | "glass" | "star" | "starFill" | "users" | "copy" | "soundOn" | "soundOff" | "back" | "settings" | "cards" | "quiz" | "dice" | "tower" | "wifi" | "timer" | "heart" | "heartFill" | "share" | "lock" | "plus" | "chat" | "send";
+type IconName = "aov" | "grid" | "hand" | "glass" | "star" | "starFill" | "users" | "copy" | "soundOn" | "soundOff" | "back" | "settings" | "cards" | "quiz" | "dice" | "tower" | "wifi" | "timer" | "heart" | "heartFill" | "share" | "lock" | "plus" | "chat" | "send" | "mic" | "phone" | "play" | "pause";
 
 const PATHS: Record<IconName, ReactNode> = {
+  mic: (
+    <>
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+    </>
+  ),
+  phone: <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />,
+  play: <path fill="currentColor" d="M8 5v14l11-7z" />,
+  pause: (
+    <>
+      <path fill="currentColor" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />
+    </>
+  ),
   send: <path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z" />,
   chat: (
     <>

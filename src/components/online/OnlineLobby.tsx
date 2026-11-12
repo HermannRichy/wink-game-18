@@ -292,7 +292,7 @@ export function OnlineLobby({
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 text-center">
-              <p className="text-base font-bold">Montre ce code à ton ou ta partenaire, à côté de toi.</p>
+              <p className="text-base font-bold">Montre ce code à {settings.player2}, à côté de toi.</p>
               <button
                 type="button"
                 onClick={async () => {
@@ -312,7 +312,7 @@ export function OnlineLobby({
           )}
           <div className="mt-auto flex flex-col items-center gap-3 text-center">
             <Mascot size={110} interactive className="float" />
-            <p className="text-base font-bold">En attente de ton ou ta partenaire…</p>
+            <p className="text-base font-bold">En attente de {settings.player2}…</p>
             <p className="text-xs font-medium">
               La partie démarre toute seule dès que l'autre entre le code dans « Rejoindre avec un code ».
             </p>
@@ -332,7 +332,7 @@ export function OnlineLobby({
           <h1 className="text-[40px] font-black leading-[0.95] tracking-[-2px]">
             Rejoindre une <span className="highlight">partie</span>.
           </h1>
-          <p className="-mt-2 text-base font-medium">Entre le code affiché sur le téléphone de ton ou ta partenaire (Mode Duo) ou reçu par message (Mode Distance).</p>
+          <p className="-mt-2 text-base font-medium">Entre le code affiché sur le téléphone de {settings.player2} (Mode Duo) ou reçu par message (Mode Distance).</p>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-bold">Code de la partie</span>
             <input

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChatButton } from "@/components/online/ChatDock";
+import { ChatButton, useChatCtx } from "@/components/online/ChatDock";
 import { useEffect, useState, type ReactNode } from "react";
 import { formatTime, type useChallengeTimer } from "@/lib/useChallengeTimer";
 import { sfx } from "@/lib/sound";
@@ -38,6 +38,17 @@ export function GameFrame({
     return () => clearTimeout(t);
   }, [partnerOnline]);
   const alert = !partnerOnline && away;
+
+  // L'autre est parti faire un défi hors de l'app : on l'affiche avec un petit minuteur
+  const partnerAway = !!useChatCtx()?.partnerAway;
+  const [awaySec, setAwaySec] = useState(0);
+  useEffect(() => {
+    if (!partnerAway) return;
+    const start = Date.now();
+    setAwaySec(0);
+    const t = setInterval(() => setAwaySec(Math.floor((Date.now() - start) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [partnerAway]);
   return (
     <main
       className={`mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] ${className}`}
@@ -56,10 +67,12 @@ export function GameFrame({
       </div>
       {mode !== "local" && (
         <div className="flex items-center gap-2">
-          <div className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-[2.5px] border-ink px-3 py-1.5 text-xs font-extrabold ${alert ? "bg-pop" : "bg-cream"}`} role="status">
-            <span className={`h-2.5 w-2.5 shrink-0 rounded-full border-2 border-ink ${alert ? "bg-muted" : "bg-[#3DDC84]"}`} />
+          <div className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-[2.5px] border-ink px-3 py-1.5 text-xs font-extrabold ${alert || partnerAway ? "bg-pop" : "bg-cream"}`} role="status">
+            <span className={`h-2.5 w-2.5 shrink-0 rounded-full border-2 border-ink ${alert && !partnerAway ? "bg-muted" : "bg-[#3DDC84]"}`} />
             <span className="truncate">
-              {alert
+              {partnerAway
+                ? `${partnerName.toUpperCase()} FAIT LE DÉFI · ${Math.floor(awaySec / 60)}:${String(awaySec % 60).padStart(2, "0")}`
+                : alert
                 ? `${partnerName.toUpperCase()} SE RECONNECTE…`
                 : `${mode === "distance" ? "À DISTANCE" : "MODE DUO"} AVEC ${partnerName.toUpperCase()}`}
             </span>

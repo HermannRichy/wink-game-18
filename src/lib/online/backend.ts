@@ -39,6 +39,8 @@ export interface RoomData {
   chat?: Record<string, ChatMsg>;
   /** « écrit… » : valeur qui change à chaque frappe (aucun contenu) */
   typing?: { p0?: number; p1?: number };
+  /** Un joueur est parti faire un défi hors de l'app (vocal, appel vidéo…) */
+  away?: { p0?: number; p1?: number };
   /** Dernier message de l'autre vu par ce joueur (horodatage du message) */
   seen?: { p0?: number; p1?: number };
 }
@@ -57,6 +59,7 @@ export interface Backend {
   setChatKey(code: string, index: 0 | 1, pub: string): Promise<void>;
   sendChat(code: string, msg: ChatMsg): Promise<void>;
   setTyping(code: string, index: 0 | 1): void;
+  setAway(code: string, index: 0 | 1, away: boolean): void;
   setSeen(code: string, index: 0 | 1, t: number): void;
   /** Marque le joueur en ligne, et hors ligne s'il perd la connexion */
   presence(code: string, index: 0 | 1): () => void;
@@ -209,6 +212,10 @@ async function firebaseBackend(): Promise<Backend> {
     async sendChat(code, msg) {
       await db.push(db.ref(database, `rooms/${code}/chat`), msg);
     },
+    setAway(code, index, away) {
+      const r = db.ref(database, `rooms/${code}/away/p${index}`);
+      void (away ? db.set(r, Date.now()) : db.remove(r));
+    },
     setTyping(code, index) {
       void db.set(db.ref(database, `rooms/${code}/typing/p${index}`), Date.now());
     },
@@ -337,6 +344,15 @@ function localBackend(): Backend {
       const room = read(code);
       if (!room) return;
       room.keys = { ...room.keys, [`p${index}`]: pub };
+      write(code, room);
+    },
+    setAway(code, index, away) {
+      const room = read(code);
+      if (!room) return;
+      const next = { ...room.away } as Record<string, number | undefined>;
+      if (away) next[`p${index}`] = Date.now();
+      else delete next[`p${index}`];
+      room.away = next;
       write(code, room);
     },
     setTyping(code, index) {
