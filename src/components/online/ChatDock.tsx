@@ -431,7 +431,7 @@ function ChatPanel({
         role="dialog"
         aria-label="Chat"
         onClick={(e) => e.stopPropagation()}
-        className="flex h-[78dvh] w-full max-w-md flex-col gap-3 rounded-t-[28px] border-[3px] border-b-0 border-ink bg-cream p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        className="flex h-[88dvh] w-full max-w-md flex-col gap-3 rounded-t-[28px] border-[3px] border-b-0 border-ink bg-cream p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
       >
         <header className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 flex-col">
