@@ -13,6 +13,7 @@ import { AgeGate } from "@/components/screens/AgeGate";
 import { Install } from "@/components/screens/Install";
 import { Players } from "@/components/screens/Players";
 import { Home } from "@/components/screens/Home";
+import { Help } from "@/components/screens/Help";
 import { CardsGame } from "@/components/screens/CardsGame";
 import { QuizGame } from "@/components/screens/QuizGame";
 import { TowerGame } from "@/components/screens/TowerGame";
@@ -27,6 +28,7 @@ type View =
   | { name: "home" }
   | { name: "settings" }
   | { name: "tour" }
+  | { name: "help" }
   | { name: "game"; game: GameId }
   | { name: "online"; game?: GameId; mode?: "duo" | "distance"; code?: string; resume?: boolean };
 
@@ -120,6 +122,7 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
     return <Players settings={settings} onDone={() => setView((v) => (v.name === "online" ? v : { name: "home" }))} />;
   }
 
+  if (view.name === "help") return <Help onBack={home} />;
   if (view.name === "settings") return <Players settings={settings} onDone={home} onBack={home} onTour={() => setView({ name: "tour" })} />;
 
   if (view.name === "online") {
@@ -167,6 +170,7 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
       resume={resume ? { code: resume.code, game: resume.game } : null}
       onResume={() => resume && setView({ name: "online", code: resume.code, resume: true })}
       onSettings={() => setView({ name: "settings" })}
+      onHelp={() => setView({ name: "help" })}
     />
   );
 }

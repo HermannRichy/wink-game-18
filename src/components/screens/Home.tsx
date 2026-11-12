@@ -28,6 +28,7 @@ export function Home({
   resume,
   onResume,
   onSettings,
+  onHelp,
 }: {
   settings: Settings;
   onPlay: (id: GameId, mode: PlayMode) => void;
@@ -35,6 +36,7 @@ export function Home({
   resume: { code: string; game: GameId } | null;
   onResume: () => void;
   onSettings: () => void;
+  onHelp: () => void;
 }) {
   const levelName = LEVELS.find((l) => l.id === settings.maxLevel)?.name;
   const [chooser, setChooser] = useState<GameInfo | null>(null);
@@ -74,6 +76,15 @@ export function Home({
               onSettings();
             }}
             className="bg-pop"
+          />
+          <IconButton
+            label="Aide"
+            icon="help"
+            onClick={() => {
+              sfx.click();
+              onHelp();
+            }}
+            className="bg-candy"
           />
         </div>
       </div>
