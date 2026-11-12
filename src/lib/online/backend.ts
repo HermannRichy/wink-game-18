@@ -39,7 +39,8 @@ export interface RoomData {
   chat?: Record<string, ChatMsg>;
 }
 
-export type JoinResult = { ok: true; index: 0 | 1 } | { ok: false; reason: "missing" | "full" };
+export type JoinResult =
+  { ok: true; index: 0 | 1 } | { ok: false; reason: "missing" | "full" };
 
 export interface Backend {
   uid(): Promise<string>;
@@ -59,7 +60,8 @@ export interface Backend {
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 export function newRoomCode() {
   let c = "";
-  for (let i = 0; i < 5; i++) c += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+  for (let i = 0; i < 5; i++)
+    c += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
   return c;
 }
 export function normalizeCode(input: string) {
@@ -74,7 +76,8 @@ export function normalizeCode(input: string) {
 const firebaseConfig = {
   apiKey: "AIzaSyAzXkqrhZNPM3N7RrStzV0BkTq8Y-0xYA8",
   authDomain: "wink-games-c024b.firebaseapp.com",
-  databaseURL: "https://wink-games-c024b-default-rtdb.europe-west1.firebasedatabase.app",
+  databaseURL:
+    "https://wink-games-c024b-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "wink-games-c024b",
   storageBucket: "wink-games-c024b.firebasestorage.app",
   messagingSenderId: "909568191660",
@@ -83,7 +86,8 @@ const firebaseConfig = {
 
 async function firebaseBackend(): Promise<Backend> {
   const { initializeApp, getApps } = await import("firebase/app");
-  const { getAuth, signInAnonymously, onAuthStateChanged } = await import("firebase/auth");
+  const { getAuth, signInAnonymously, onAuthStateChanged } =
+    await import("firebase/auth");
   const db = await import("firebase/database");
 
   const app = getApps()[0] ?? initializeApp(firebaseConfig);
@@ -108,42 +112,85 @@ async function firebaseBackend(): Promise<Backend> {
 
   const roomRef = (code: string) => db.ref(database, `rooms/${code}`);
 
+  /** Attend que la connexion à Firebase soit rétablie (retour d'une autre appli, réseau qui revient) */
+  const whenConnected = () =>
+    new Promise<void>((resolve) => {
+      let off: () => void = () => {};
+      const done = () => {
+        off();
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(done, 7000);
+      off = db.onValue(db.ref(database, ".info/connected"), (snap) => {
+        if (snap.val() === true) done();
+      });
+    });
+
+  /** Réessaie 3 fois avant de baisser les bras : une reconnexion prend souvent quelques secondes */
+  async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+    for (let i = 0; ; i++) {
+      try {
+        await whenConnected();
+        return await fn();
+      } catch (e) {
+        if (i >= 2) throw e;
+        await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
+      }
+    }
+  }
+
+  async function joinOnce(
+    code: string,
+    player: PlayerInfo,
+  ): Promise<JoinResult> {
+    await uid();
+    const snap = await db.get(roomRef(code));
+    if (!snap.exists()) return { ok: false, reason: "missing" };
+    let result: JoinResult = { ok: false, reason: "full" };
+    await db.runTransaction(roomRef(code), (room: RoomData | null) => {
+      if (!room) {
+        result = { ok: false, reason: "missing" };
+        return room;
+      }
+      if (room.players.p0?.uid === player.uid) {
+        result = { ok: true, index: 0 };
+        room.players.p0 = { ...room.players.p0, online: true };
+        return room;
+      }
+      if (room.players.p1?.uid === player.uid || !room.players.p1) {
+        result = { ok: true, index: 1 };
+        room.players.p1 = player;
+        return room;
+      }
+      result = { ok: false, reason: "full" };
+      return undefined;
+    });
+    return result;
+  }
+
   return {
     uid,
-    async create(room) {
-      await uid();
-      await db.set(roomRef(room.code), room);
-    },
-    async join(code, player) {
-      await uid();
-      const snap = await db.get(roomRef(code));
-      if (!snap.exists()) return { ok: false, reason: "missing" };
-      let result: JoinResult = { ok: false, reason: "full" };
-      await db.runTransaction(roomRef(code), (room: RoomData | null) => {
-        if (!room) {
-          result = { ok: false, reason: "missing" };
-          return room;
-        }
-        if (room.players.p0?.uid === player.uid) {
-          result = { ok: true, index: 0 };
-          room.players.p0 = { ...room.players.p0, online: true };
-          return room;
-        }
-        if (room.players.p1?.uid === player.uid || !room.players.p1) {
-          result = { ok: true, index: 1 };
-          room.players.p1 = player;
-          return room;
-        }
-        result = { ok: false, reason: "full" };
-        return undefined;
+    create(room) {
+      return withRetry(async () => {
+        await uid();
+        await db.set(roomRef(room.code), room);
       });
-      return result;
+    },
+    join(code, player) {
+      return withRetry(() => joinOnce(code, player));
     },
     subscribe(code, cb) {
-      return db.onValue(roomRef(code), (snap) => cb(snap.exists() ? (snap.val() as RoomData) : null));
+      return db.onValue(roomRef(code), (snap) =>
+        cb(snap.exists() ? (snap.val() as RoomData) : null),
+      );
     },
     async transact(code, fn) {
-      await db.runTransaction(db.ref(database, `rooms/${code}/stateJson`), (current: string | null) => (current === null ? undefined : fn(current)));
+      await db.runTransaction(
+        db.ref(database, `rooms/${code}/stateJson`),
+        (current: string | null) =>
+          current === null ? undefined : fn(current),
+      );
     },
     setLive(code, live) {
       void db.set(db.ref(database, `rooms/${code}/live`), live);
@@ -155,17 +202,24 @@ async function firebaseBackend(): Promise<Backend> {
       await db.push(db.ref(database, `rooms/${code}/chat`), msg);
     },
     presence(code, index) {
-      const onlineRef = db.ref(database, `rooms/${code}/players/p${index}/online`);
+      const onlineRef = db.ref(
+        database,
+        `rooms/${code}/players/p${index}/online`,
+      );
       // À chaque (re)connexion : on se remet « en ligne » et on réarme la détection de coupure
-      const stopConn = db.onValue(db.ref(database, ".info/connected"), (snap) => {
-        if (snap.val() === true) {
-          void db.onDisconnect(onlineRef).set(false);
-          void db.set(onlineRef, true);
-        }
-      });
+      const stopConn = db.onValue(
+        db.ref(database, ".info/connected"),
+        (snap) => {
+          if (snap.val() === true) {
+            void db.onDisconnect(onlineRef).set(false);
+            void db.set(onlineRef, true);
+          }
+        },
+      );
       // Retour de l'app au premier plan
       const onVisible = () => {
-        if (document.visibilityState === "visible") void db.set(onlineRef, true);
+        if (document.visibilityState === "visible")
+          void db.set(onlineRef, true);
       };
       document.addEventListener("visibilitychange", onVisible);
       return () => {
@@ -183,7 +237,10 @@ async function firebaseBackend(): Promise<Backend> {
 // ———————————————————— Local (tests à deux onglets) ————————————————————
 
 function localBackend(): Backend {
-  const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("wink-rooms") : null;
+  const channel =
+    typeof BroadcastChannel !== "undefined"
+      ? new BroadcastChannel("wink-rooms")
+      : null;
   const key = (code: string) => `wink-room-${code}`;
   const read = (code: string): RoomData | null => {
     try {
@@ -231,7 +288,8 @@ function localBackend(): Backend {
         cb(read(code));
       };
       const onMsg = (e: MessageEvent) => e.data === code && emit();
-      const onLocal = (e: Event) => (e as CustomEvent).detail === code && emit();
+      const onLocal = (e: Event) =>
+        (e as CustomEvent).detail === code && emit();
       const onStorage = (e: StorageEvent) => e.key === key(code) && emit();
       channel?.addEventListener("message", onMsg);
       window.addEventListener("wink-room", onLocal);
@@ -267,7 +325,10 @@ function localBackend(): Backend {
     async sendChat(code, msg) {
       const room = read(code);
       if (!room) return;
-      room.chat = { ...room.chat, [`${msg.t}-${Math.random().toString(36).slice(2, 8)}`]: msg };
+      room.chat = {
+        ...room.chat,
+        [`${msg.t}-${Math.random().toString(36).slice(2, 8)}`]: msg,
+      };
       write(code, room);
     },
     presence(code, index) {
@@ -304,12 +365,16 @@ export function getBackend(): Promise<Backend> {
   if (!backendPromise) {
     let local = false;
     try {
-      local = new URLSearchParams(window.location.search).get("backend") === "local" || sessionStorage.getItem("wink-backend") === "local";
+      local =
+        new URLSearchParams(window.location.search).get("backend") ===
+          "local" || sessionStorage.getItem("wink-backend") === "local";
       if (local) sessionStorage.setItem("wink-backend", "local");
     } catch {
       /* ignore */
     }
-    backendPromise = local ? Promise.resolve(localBackend()) : firebaseBackend();
+    backendPromise = local
+      ? Promise.resolve(localBackend())
+      : firebaseBackend();
   }
   return backendPromise;
 }
