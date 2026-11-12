@@ -3,7 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import { GA_ID } from "@/lib/analytics";
 
-const SITE_URL = "https://wink.hermannrichy.site";
+const SITE_URL = "https://winkgame.site";
 const TITLE = "Wink — les jeux à deux qui font monter la température";
 const DESCRIPTION =
   "Cartes coquines, quiz, Ludo Hot et La Tour : des jeux drôles et sensuels pour les couples. Gratuit, sans inscription, 100 % hors ligne. Réservé aux 18 ans et plus.";

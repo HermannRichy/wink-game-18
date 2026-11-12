@@ -223,7 +223,7 @@ export function OnlineLobby({
     );
   }
 
-  const shareText = code ? `Viens jouer à ${gameInfo?.name ?? "Wink"} avec moi sur Wink 😏\nOuvre Wink, touche « Rejoindre avec un code » et entre : ${code}\n(Pas encore Wink ? wink.hermannrichy.site)` : "";
+  const shareText = code ? `Viens jouer à ${gameInfo?.name ?? "Wink"} avec moi sur Wink 😏\nOuvre Wink, touche « Rejoindre avec un code » et entre : ${code}\n(Pas encore Wink ? winkgame.site)` : "";
 
   return (
     <Screen>

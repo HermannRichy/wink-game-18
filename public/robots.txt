@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://wink.hermannrichy.site/sitemap.xml
+Sitemap: https://winkgame.site/sitemap.xml
