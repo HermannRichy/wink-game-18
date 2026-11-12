@@ -244,43 +244,6 @@ function ChatPanel({
           </button>
         </header>
 
-        <div className="grid grid-cols-8 gap-1.5" role="group" aria-label="Réactions rapides et emojis">
-          {REACTIONS.map((r) => (
-            <button
-              key={r}
-              type="button"
-              disabled={!ready}
-              aria-label={`Envoyer ${r}`}
-              onClick={() => {
-                sfx.click();
-                void onSend("r", r);
-              }}
-              className="brutal-sm press flex aspect-square items-center justify-center rounded-xl bg-cream text-[21px] disabled:opacity-50"
-            >
-              {r}
-            </button>
-          ))}
-          <button
-            type="button"
-            aria-label="Plus d'emojis"
-            aria-pressed={emojis}
-            onClick={() => setEmojis((v) => !v)}
-            className={`brutal-sm press flex aspect-square items-center justify-center rounded-xl text-[21px] ${emojis ? "bg-pop" : "bg-cream"}`}
-          >
-            😊
-          </button>
-        </div>
-
-        {emojis && (
-          <div className="grid grid-cols-8 gap-1 rounded-2xl border-[3px] border-ink bg-white/60 p-2">
-            {EMOJIS.map((e) => (
-              <button key={e} type="button" aria-label={e} onClick={() => setText((t) => (t + e).slice(0, MAX))} className="h-9 text-[22px]">
-                {e}
-              </button>
-            ))}
-          </div>
-        )}
-
         <div className="flex flex-1 flex-col gap-2 overflow-y-auto rounded-2xl border-[3px] border-ink bg-white/60 p-3">
           {!ready && (
             <p className="m-auto flex items-center gap-2.5 text-center text-sm font-bold">
@@ -325,6 +288,43 @@ function ChatPanel({
           ))}
           <div ref={end} />
         </div>
+
+        <div className="grid grid-cols-8 gap-1.5" role="group" aria-label="Réactions rapides et emojis">
+          {REACTIONS.map((r) => (
+            <button
+              key={r}
+              type="button"
+              disabled={!ready}
+              aria-label={`Envoyer ${r}`}
+              onClick={() => {
+                sfx.click();
+                void onSend("r", r);
+              }}
+              className="brutal-sm press flex aspect-square items-center justify-center rounded-xl bg-cream text-[21px] disabled:opacity-50"
+            >
+              {r}
+            </button>
+          ))}
+          <button
+            type="button"
+            aria-label="Plus d'emojis"
+            aria-pressed={emojis}
+            onClick={() => setEmojis((v) => !v)}
+            className={`brutal-sm press flex aspect-square items-center justify-center rounded-xl text-[21px] ${emojis ? "bg-pop" : "bg-cream"}`}
+          >
+            😊
+          </button>
+        </div>
+
+        {emojis && (
+          <div className="grid grid-cols-8 gap-1 rounded-2xl border-[3px] border-ink bg-white/60 p-2">
+            {EMOJIS.map((e) => (
+              <button key={e} type="button" aria-label={e} onClick={() => setText((t) => (t + e).slice(0, MAX))} className="h-9 text-[22px]">
+                {e}
+              </button>
+            ))}
+          </div>
+        )}
 
         <form
           className="flex gap-2"
