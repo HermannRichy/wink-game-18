@@ -1,5 +1,6 @@
 "use client";
 
+import { stat } from "@/lib/stats";
 import { track } from "@/lib/analytics";
 import { useEffect, useState } from "react";
 
@@ -23,6 +24,7 @@ if (typeof window !== "undefined") {
   window.addEventListener("appinstalled", () => {
     installed = true;
     track("pwa_install");
+    stat("pwa_install");
     deferred = null;
     notify();
   });

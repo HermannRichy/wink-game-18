@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { GAMES, type GameId } from "@/data/games";
+import { stat } from "@/lib/stats";
 import type { Settings } from "@/lib/db";
 import { getBackend, newRoomCode, normalizeCode, type PlayerInfo } from "@/lib/online/backend";
 import { forgetRoom, rememberRoom, setActiveRoom } from "@/lib/online/last-room";
@@ -85,12 +86,14 @@ export function OnlineLobby({
         stateJson: JSON.stringify(entry.module.init({ maxLevel: settings.maxLevel, starter: Math.random() < 0.5 ? 0 : 1, distance: mode === "distance" })),
       });
       rememberRoom(roomCode, create);
+      stat("room_created");
       setCode(roomCode);
       setMe(0);
       presenceOff.current = b.presence(roomCode, 0);
       sfx.success();
     } catch (e) {
       console.error(e);
+      stat("err_online");
       setError(`Impossible de créer la partie. ${errHint(e)}`);
     } finally {
       setBusy(false);
@@ -115,6 +118,7 @@ export function OnlineLobby({
         setError(res.reason === "missing" ? "Aucune partie avec ce code. Vérifie-le." : "Cette partie est déjà complète.");
         return;
       }
+      stat("room_joined");
       setCode(c);
       setMe(res.index);
       presenceOff.current = b.presence(c, res.index);
@@ -122,6 +126,7 @@ export function OnlineLobby({
       vibrate([30, 30, 30]);
     } catch (e) {
       console.error(e);
+      stat("err_online");
       setError(`Impossible de rejoindre. ${errHint(e)}`);
     } finally {
       setBusy(false);
@@ -175,6 +180,7 @@ export function OnlineLobby({
     if (code && (endForAll || !partnerOnline)) {
       const b = await getBackend();
       void b.remove(code);
+      stat("room_ended");
       forgetRoom(code);
     }
     onExit();

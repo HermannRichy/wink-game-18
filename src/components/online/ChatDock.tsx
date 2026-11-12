@@ -1,5 +1,6 @@
 "use client";
 
+import { stat } from "@/lib/stats";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CHAT_CHALLENGES_DISTANCE, CHAT_CHALLENGES_DUO } from "@/data/chat-challenges";
 import { getBackend, type RoomData } from "@/lib/online/backend";
@@ -295,6 +296,7 @@ export function ChatProvider({ room, me, names, distance, children }: { room: Ro
         const { iv, ct } = await encryptText(shared, JSON.stringify({ ...payload, x }));
         const b = await getBackend();
         await b.sendChat(code, { f: me, iv, ct, t: Date.now() });
+        if (payload.k !== "r") stat(payload.k === "s" ? "chat_sticker" : payload.k === "v" ? "chat_voice" : payload.k === "e" ? "chat_react" : "chat_msg");
         setPending((list) => list.filter((i) => i.id !== pid));
       } catch {
         setPending((list) => list.map((i) => (i.id === pid ? { ...i, status: "failed" } : i)));

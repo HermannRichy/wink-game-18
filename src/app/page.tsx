@@ -11,6 +11,7 @@ import { useInstall } from "@/lib/install";
 import { setSoundEnabled } from "@/lib/sound";
 import { AgeGate } from "@/components/screens/AgeGate";
 import { Install } from "@/components/screens/Install";
+import { stat, statOpen } from "@/lib/stats";
 import { InAppBrowser, detectInApp, type InAppInfo } from "@/components/screens/InAppBrowser";
 import { Players } from "@/components/screens/Players";
 import { Home } from "@/components/screens/Home";
@@ -49,8 +50,13 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
   const [view, setView] = useState<View>({ name: "home" });
   const [inApp, setInApp] = useState<InAppInfo | null>(null);
   useEffect(() => {
-    setInApp(detectInApp(navigator.userAgent));
+    const info = detectInApp(navigator.userAgent);
+    setInApp(info);
+    if (info) stat("in_app");
   }, []);
+  useEffect(() => {
+    if (stored?.ageConfirmed) statOpen();
+  }, [stored?.ageConfirmed]);
   useEffect(() => {
     onBusy(view.name === "game" || view.name === "online");
   }, [view.name, onBusy]);
@@ -118,6 +124,7 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
     return (
       <Tour
         onDone={() => {
+          if (!settings.tourDone) stat("tour_done");
           void saveSettings({ tourDone: true });
           if (view.name === "tour") setView({ name: "settings" });
         }}
@@ -171,6 +178,8 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
       settings={settings}
       onPlay={(game, mode) => {
         track("game_start", { game, mode });
+        stat(`g_${game}`);
+        stat(`m_${mode}`);
         setView(mode === "local" ? { name: "game", game } : { name: "online", game, mode });
       }}
       onJoin={() => setView({ name: "online" })}

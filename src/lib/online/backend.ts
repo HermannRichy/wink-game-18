@@ -66,7 +66,16 @@ export interface Backend {
   remove(code: string): Promise<void>;
   /** État de la connexion au serveur */
   connection(cb: (connected: boolean) => void): () => void;
+  /** Statistiques anonymes : +1 sur un compteur (jour/semaine/mois), jamais de données perso */
+  bump(period: string, name: string): Promise<void>;
+  /** Admin : connexion Google, renvoie l'e-mail */
+  adminLogin(): Promise<string>;
+  /** Admin : lecture de tous les compteurs */
+  readStats(): Promise<Stats>;
 }
+
+/** { "2026-11-13": { active: 12, … }, "2026-W46": {…}, "2026-11": {…} } */
+export type Stats = Record<string, Record<string, number>>;
 
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 export function newRoomCode() {
@@ -97,7 +106,7 @@ const firebaseConfig = {
 
 async function firebaseBackend(): Promise<Backend> {
   const { initializeApp, getApps } = await import("firebase/app");
-  const { getAuth, signInAnonymously, onAuthStateChanged } =
+  const { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } =
     await import("firebase/auth");
   const db = await import("firebase/database");
 
@@ -114,14 +123,30 @@ async function firebaseBackend(): Promise<Backend> {
           resolve(user.uid);
         }
       });
-      signInAnonymously(auth).catch((e) => {
-        off();
-        uidPromise = null;
-        reject(e);
-      });
+      signInAnonymously(auth)
+        .then((cred) => {
+          // Nouveau compte anonyme (première connexion de cet appareil)
+          const m = cred.user.metadata;
+          if (m.creationTime && m.creationTime === m.lastSignInTime) {
+            void bump(periodKeys().day, "signups");
+          }
+        })
+        .catch((e) => {
+          off();
+          uidPromise = null;
+          reject(e);
+        });
     }));
 
   const roomRef = (code: string) => db.ref(database, `rooms/${code}`);
+
+  async function bump(period: string, name: string) {
+    try {
+      await db.update(db.ref(database, `stats/${period}`), { [name]: db.increment(1) });
+    } catch {
+      /* les statistiques ne doivent jamais gêner */
+    }
+  }
 
   /** Attend que la connexion à Firebase soit rétablie (retour d'une autre appli, réseau qui revient) */
   const whenConnected = () =>
@@ -260,7 +285,27 @@ async function firebaseBackend(): Promise<Backend> {
     connection(cb) {
       return db.onValue(db.ref(database, ".info/connected"), (snap) => cb(snap.val() === true));
     },
+    bump,
+    async adminLogin() {
+      const cred = await signInWithPopup(auth, new GoogleAuthProvider());
+      return cred.user.email ?? "";
+    },
+    async readStats() {
+      const snap = await db.get(db.ref(database, "stats"));
+      return (snap.val() ?? {}) as Stats;
+    },
   };
+}
+
+/** Clés de période (UTC) : jour, semaine ISO, mois */
+export function periodKeys(d = new Date()) {
+  const day = d.toISOString().slice(0, 10);
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dow = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - dow);
+  const yStart = Date.UTC(t.getUTCFullYear(), 0, 1);
+  const wk = Math.ceil(((t.getTime() - yStart) / 86400000 + 1) / 7);
+  return { day, week: `${t.getUTCFullYear()}-W${String(wk).padStart(2, "0")}`, month: day.slice(0, 7) };
 }
 
 // ———————————————————— Local (tests à deux onglets) ————————————————————
@@ -405,6 +450,25 @@ function localBackend(): Backend {
     },
     async remove(code) {
       write(code, null);
+    },
+    async bump(period, name) {
+      try {
+        const st = JSON.parse(localStorage.getItem("wink-stats") ?? "{}") as Stats;
+        st[period] = { ...st[period], [name]: (st[period]?.[name] ?? 0) + 1 };
+        localStorage.setItem("wink-stats", JSON.stringify(st));
+      } catch {
+        /* ignore */
+      }
+    },
+    async adminLogin() {
+      return "admin@local";
+    },
+    async readStats() {
+      try {
+        return JSON.parse(localStorage.getItem("wink-stats") ?? "{}") as Stats;
+      } catch {
+        return {};
+      }
     },
     connection(cb) {
       cb(true);
