@@ -1,5 +1,6 @@
 import type { GameId } from "@/data/games";
 import { getBackend } from "@/lib/online/backend";
+import { forgetChatKeys } from "@/lib/online/chat-crypto";
 
 const KEY = "wink-rooms";
 /** Une partie de plus de 24 h est supprimée automatiquement */
@@ -34,6 +35,7 @@ export function rememberRoom(code: string, game: GameId) {
 }
 
 export function forgetRoom(code: string) {
+  forgetChatKeys(code);
   write(read().filter((r) => r.code !== code));
 }
 

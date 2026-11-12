@@ -21,10 +21,26 @@ export interface MyKeys {
 
 const storeKey = (code: string, index: number) => `wink-chat-key-${code}-${index}`;
 
-/** Récupère la paire de clés de cette partie (gardée le temps de l'onglet), ou en crée une */
+/** Efface les clés de chat d'une partie (quand on l'oublie ou qu'elle est supprimée) */
+export function forgetChatKeys(code: string) {
+  for (const i of [0, 1]) {
+    try {
+      localStorage.removeItem(storeKey(code, i));
+      sessionStorage.removeItem(storeKey(code, i));
+    } catch {
+      /* stockage indisponible */
+    }
+  }
+}
+
+/**
+ * Récupère la paire de clés de cette partie, ou en crée une.
+ * Gardée sur le téléphone (localStorage) : fermer l'app ne doit pas changer la clé,
+ * sinon les anciens messages deviennent illisibles.
+ */
 export async function getMyKeys(code: string, index: 0 | 1): Promise<MyKeys> {
   try {
-    const raw = sessionStorage.getItem(storeKey(code, index));
+    const raw = localStorage.getItem(storeKey(code, index)) ?? sessionStorage.getItem(storeKey(code, index));
     if (raw) {
       const { pub, priv } = JSON.parse(raw) as { pub: string; priv: JsonWebKey };
       return { pub, priv: await crypto.subtle.importKey("jwk", priv, ECDH, false, ["deriveKey"]) };
@@ -36,7 +52,7 @@ export async function getMyKeys(code: string, index: 0 | 1): Promise<MyKeys> {
   const pub = JSON.stringify(await crypto.subtle.exportKey("jwk", pair.publicKey));
   const privJwk = await crypto.subtle.exportKey("jwk", pair.privateKey);
   try {
-    sessionStorage.setItem(storeKey(code, index), JSON.stringify({ pub, priv: privJwk }));
+    localStorage.setItem(storeKey(code, index), JSON.stringify({ pub, priv: privJwk }));
   } catch {
     /* stockage indisponible : la clé vivra le temps de la page */
   }
