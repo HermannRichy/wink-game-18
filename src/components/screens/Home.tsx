@@ -102,7 +102,7 @@ export function Home({
             sfx.click();
             onResume();
           }}
-          className="brutal press flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-passion text-base font-extrabold"
+          className="brutal press flex h-14 items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl bg-passion px-3 text-[15px] font-extrabold"
         >
           <Icon name="users" size={20} /> REPRENDRE LA PARTIE · {resume.code}
         </button>
@@ -113,9 +113,9 @@ export function Home({
           sfx.click();
           onJoin();
         }}
-        className="brutal-sm press flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-ink text-base font-extrabold text-pop"
+        className="brutal-sm press flex h-14 items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl bg-ink px-3 text-[15px] font-extrabold text-pop"
       >
-        <Icon name="users" size={20} /> REJOINDRE UNE PARTIE AVEC UN CODE
+        <Icon name="users" size={20} /> REJOINDRE AVEC UN CODE
       </button>
 
       <div className="flex items-baseline justify-between">

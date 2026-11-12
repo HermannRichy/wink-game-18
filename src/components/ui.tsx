@@ -2,9 +2,10 @@
 
 import type { ReactNode } from "react";
 
-type IconName = "aov" | "grid" | "hand" | "glass" | "star" | "starFill" | "users" | "copy" | "soundOn" | "soundOff" | "back" | "settings" | "cards" | "quiz" | "dice" | "tower" | "wifi" | "timer" | "heart" | "heartFill" | "share" | "lock" | "plus" | "chat";
+type IconName = "aov" | "grid" | "hand" | "glass" | "star" | "starFill" | "users" | "copy" | "soundOn" | "soundOff" | "back" | "settings" | "cards" | "quiz" | "dice" | "tower" | "wifi" | "timer" | "heart" | "heartFill" | "share" | "lock" | "plus" | "chat" | "send";
 
 const PATHS: Record<IconName, ReactNode> = {
+  send: <path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z" />,
   chat: (
     <>
       <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4h0A2.5 2.5 0 0 1 4 13.5z" />
@@ -182,4 +183,9 @@ export function TopBar({ onBack, title, right }: { onBack?: () => void; title?: 
       <span className="flex min-w-12 justify-end">{right}</span>
     </div>
   );
+}
+
+/** Petit indicateur de chargement */
+export function Spinner({ className = "" }: { className?: string }) {
+  return <span aria-hidden="true" className={`inline-block h-5 w-5 shrink-0 animate-spin rounded-full border-[3px] border-ink border-t-transparent ${className}`} />;
 }

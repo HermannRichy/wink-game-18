@@ -55,6 +55,8 @@ export interface Backend {
   /** Marque le joueur en ligne, et hors ligne s'il perd la connexion */
   presence(code: string, index: 0 | 1): () => void;
   remove(code: string): Promise<void>;
+  /** État de la connexion au serveur */
+  connection(cb: (connected: boolean) => void): () => void;
 }
 
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -231,6 +233,9 @@ async function firebaseBackend(): Promise<Backend> {
     async remove(code) {
       await db.remove(roomRef(code));
     },
+    connection(cb) {
+      return db.onValue(db.ref(database, ".info/connected"), (snap) => cb(snap.val() === true));
+    },
   };
 }
 
@@ -355,6 +360,10 @@ function localBackend(): Backend {
     },
     async remove(code) {
       write(code, null);
+    },
+    connection(cb) {
+      cb(true);
+      return () => {};
     },
   };
 }

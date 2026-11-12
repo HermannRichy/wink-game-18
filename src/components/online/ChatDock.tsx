@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { getBackend, type RoomData } from "@/lib/online/backend";
 import { decryptText, deriveShared, encryptText, getMyKeys, type MyKeys } from "@/lib/online/chat-crypto";
 import { sfx } from "@/lib/sound";
-import { Icon } from "@/components/ui";
+import { Icon, Spinner } from "@/components/ui";
 
 const MAX = 300;
 const REACTIONS = ["😏", "🔥", "😂", "😳", "❤️", "😈", "👏"];
@@ -16,6 +16,12 @@ interface Msg {
   text: string | null;
   kind: "m" | "r";
   t: number;
+}
+
+interface Pending {
+  id: string;
+  text: string;
+  status: "sending" | "failed";
 }
 
 interface Ctx {
@@ -54,6 +60,7 @@ export function ChatProvider({ room, me, names, children }: { room: RoomData; me
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState(0);
+  const [pending, setPending] = useState<Pending[]>([]);
   const [float, setFloat] = useState<{ id: number; emoji: string } | null>(null);
   const firstLoad = useRef(true);
   const known = useRef(new Set<string>());
@@ -144,14 +151,30 @@ export function ChatProvider({ room, me, names, children }: { room: RoomData; me
   }, []);
 
   const send = useCallback(
-    async (kind: "m" | "r", text: string) => {
+    async (kind: "m" | "r", text: string, retryId?: string) => {
       const x = text.trim().slice(0, MAX);
       if (!x || !shared) return;
-      const { iv, ct } = await encryptText(shared, JSON.stringify({ k: kind, x }));
-      const b = await getBackend();
-      await b.sendChat(code, { f: me, iv, ct, t: Date.now() });
+      const pid = retryId ?? `p${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+      if (kind === "m") {
+        setPending((list) => (list.some((i) => i.id === pid) ? list.map((i) => (i.id === pid ? { ...i, status: "sending" } : i)) : [...list, { id: pid, text: x, status: "sending" }]));
+      }
+      try {
+        const { iv, ct } = await encryptText(shared, JSON.stringify({ k: kind, x }));
+        const b = await getBackend();
+        await b.sendChat(code, { f: me, iv, ct, t: Date.now() });
+        setPending((list) => list.filter((i) => i.id !== pid));
+      } catch {
+        setPending((list) => list.map((i) => (i.id === pid ? { ...i, status: "failed" } : i)));
+      }
     },
     [shared, code, me],
+  );
+  const retry = useCallback(
+    (id: string) => {
+      const p = pending.find((i) => i.id === id);
+      if (p) void send("m", p.text, id);
+    },
+    [pending, send],
   );
 
   const ctx = useMemo(() => ({ open: openPanel, unread }), [openPanel, unread]);
@@ -164,24 +187,28 @@ export function ChatProvider({ room, me, names, children }: { room: RoomData; me
           <span className="float-up text-[72px]">{float.emoji}</span>
         </div>
       )}
-      {open && <ChatPanel msgs={msgs} me={me} partnerName={names[partner]} ready={!!shared} onSend={send} onClose={() => setOpen(false)} />}
+      {open && <ChatPanel msgs={msgs} pending={pending} me={me} partnerName={names[partner]} ready={!!shared} onSend={send} onRetry={retry} onClose={() => setOpen(false)} />}
     </ChatCtx.Provider>
   );
 }
 
 function ChatPanel({
   msgs,
+  pending,
   me,
   partnerName,
   ready,
   onSend,
+  onRetry,
   onClose,
 }: {
   msgs: Msg[];
+  pending: Pending[];
   me: 0 | 1;
   partnerName: string;
   ready: boolean;
   onSend: (kind: "m" | "r", text: string) => Promise<void>;
+  onRetry: (id: string) => void;
   onClose: () => void;
 }) {
   const [text, setText] = useState("");
@@ -189,7 +216,7 @@ function ChatPanel({
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
-  }, [msgs.length]);
+  }, [msgs.length, pending.length]);
 
   function submit() {
     if (!text.trim() || !ready) return;
@@ -217,9 +244,50 @@ function ChatPanel({
           </button>
         </header>
 
+        <div className="grid grid-cols-8 gap-1.5" role="group" aria-label="Réactions rapides et emojis">
+          {REACTIONS.map((r) => (
+            <button
+              key={r}
+              type="button"
+              disabled={!ready}
+              aria-label={`Envoyer ${r}`}
+              onClick={() => {
+                sfx.click();
+                void onSend("r", r);
+              }}
+              className="brutal-sm press flex aspect-square items-center justify-center rounded-xl bg-cream text-[21px] disabled:opacity-50"
+            >
+              {r}
+            </button>
+          ))}
+          <button
+            type="button"
+            aria-label="Plus d'emojis"
+            aria-pressed={emojis}
+            onClick={() => setEmojis((v) => !v)}
+            className={`brutal-sm press flex aspect-square items-center justify-center rounded-xl text-[21px] ${emojis ? "bg-pop" : "bg-cream"}`}
+          >
+            😊
+          </button>
+        </div>
+
+        {emojis && (
+          <div className="grid grid-cols-8 gap-1 rounded-2xl border-[3px] border-ink bg-white/60 p-2">
+            {EMOJIS.map((e) => (
+              <button key={e} type="button" aria-label={e} onClick={() => setText((t) => (t + e).slice(0, MAX))} className="h-9 text-[22px]">
+                {e}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex flex-1 flex-col gap-2 overflow-y-auto rounded-2xl border-[3px] border-ink bg-white/60 p-3">
-          {!ready && <p className="m-auto text-center text-sm font-bold">🔐 Sécurisation de la conversation…</p>}
-          {ready && msgs.length === 0 && <p className="m-auto text-center text-sm font-semibold">Dis quelque chose de gentil 😏</p>}
+          {!ready && (
+            <p className="m-auto flex items-center gap-2.5 text-center text-sm font-bold">
+              <Spinner /> Sécurisation de la conversation…
+            </p>
+          )}
+          {ready && msgs.length === 0 && pending.length === 0 && <p className="m-auto text-center text-sm font-semibold">Dis quelque chose de gentil 😏</p>}
           {msgs.map((m) =>
             m.kind === "r" && m.text ? (
               <div key={m.id} className={`flex ${m.from === me ? "justify-end" : "justify-start"}`}>
@@ -237,36 +305,26 @@ function ChatPanel({
               </div>
             ),
           )}
+          {pending.map((p) => (
+            <div key={p.id} className="flex flex-col items-end gap-0.5">
+              <span
+                className={`max-w-[80%] whitespace-pre-wrap break-words rounded-2xl border-[2.5px] border-ink px-3 py-2 text-[15px] font-semibold ${
+                  p.status === "failed" ? "bg-flame" : "bg-candy opacity-60"
+                }`}
+              >
+                {p.text}
+              </span>
+              {p.status === "sending" ? (
+                <span className="text-[11px] font-bold">envoi…</span>
+              ) : (
+                <button type="button" onClick={() => onRetry(p.id)} className="text-[11px] font-extrabold underline">
+                  Échec · toucher pour réessayer
+                </button>
+              )}
+            </div>
+          ))}
           <div ref={end} />
         </div>
-
-        <div className="flex justify-between gap-1" role="group" aria-label="Réactions rapides">
-          {REACTIONS.map((r) => (
-            <button
-              key={r}
-              type="button"
-              disabled={!ready}
-              aria-label={`Envoyer ${r}`}
-              onClick={() => {
-                sfx.click();
-                void onSend("r", r);
-              }}
-              className="brutal-sm press flex h-11 w-11 items-center justify-center rounded-xl bg-cream text-[22px] disabled:opacity-50"
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-
-        {emojis && (
-          <div className="grid grid-cols-8 gap-1 rounded-2xl border-[3px] border-ink bg-white/60 p-2">
-            {EMOJIS.map((e) => (
-              <button key={e} type="button" aria-label={e} onClick={() => setText((t) => (t + e).slice(0, MAX))} className="h-9 text-[22px]">
-                {e}
-              </button>
-            ))}
-          </div>
-        )}
 
         <form
           className="flex gap-2"
@@ -275,9 +333,6 @@ function ChatPanel({
             submit();
           }}
         >
-          <button type="button" aria-label="Emojis" aria-pressed={emojis} onClick={() => setEmojis((v) => !v)} className={`brutal-sm press h-12 w-12 shrink-0 rounded-2xl text-xl ${emojis ? "bg-pop" : "bg-cream"}`}>
-            😊
-          </button>
           <input
             value={text}
             onChange={(e) => setText(e.target.value.slice(0, MAX))}
@@ -286,8 +341,8 @@ function ChatPanel({
             autoComplete="off"
             className="min-w-0 flex-1 rounded-2xl border-[3px] border-ink bg-white px-3 text-base font-semibold"
           />
-          <button type="submit" disabled={!ready || !text.trim()} className="brutal-sm press h-12 shrink-0 rounded-2xl bg-passion px-4 text-base font-extrabold disabled:opacity-50">
-            OK
+          <button type="submit" aria-label="Envoyer" disabled={!ready || !text.trim()} className="brutal-sm press flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-passion disabled:opacity-50">
+            <Icon name="send" size={22} />
           </button>
         </form>
       </section>

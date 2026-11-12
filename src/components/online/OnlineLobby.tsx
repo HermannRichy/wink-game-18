@@ -10,7 +10,7 @@ import { sfx } from "@/lib/sound";
 import { vibrate } from "@/lib/deck";
 import { DUO_GAMES, OnlineDuoGame } from "@/components/games/registry";
 import { Mascot } from "@/components/Mascot";
-import { Icon, Screen, TopBar } from "@/components/ui";
+import { Icon, Screen, Spinner, TopBar } from "@/components/ui";
 
 export function OnlineLobby({
   settings,
@@ -37,6 +37,7 @@ export function OnlineLobby({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const lastAction = useRef<"host" | "join">("join");
   const room = useRoom(code);
   const presenceOff = useRef<(() => void) | null>(null);
   const gameInfo = GAMES.find((g) => g.id === (room?.game ?? create));
@@ -61,6 +62,7 @@ export function OnlineLobby({
 
   async function host() {
     if (!create) return;
+    lastAction.current = "host";
     setBusy(true);
     setError(null);
     try {
@@ -89,6 +91,7 @@ export function OnlineLobby({
   }
 
   async function join() {
+    lastAction.current = "join";
     const c = normalizeCode(input);
     if (c.length !== 5) {
       setError("Le code fait 5 caractères.");
@@ -197,7 +200,23 @@ export function OnlineLobby({
     );
   }
 
-  const shareText = code ? `Viens jouer à ${gameInfo?.name ?? "Wink"} avec moi sur Wink 😏\nOuvre Wink, touche « Rejoindre une partie avec un code » et entre : ${code}\n(Pas encore Wink ? wink.hermannrichy.site)` : "";
+  // Reprise d'une partie : écran de chargement dédié
+  if (autoJoin && !code && !create && !error) {
+    return (
+      <Screen>
+        <TopBar onBack={onExit} title="Reprise" />
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+          <Mascot size={120} className="float" />
+          <p className="flex items-center gap-2.5 text-lg font-bold">
+            <Spinner /> Reprise de la partie…
+          </p>
+          <p className="text-sm font-medium">Ça peut prendre quelques secondes.</p>
+        </div>
+      </Screen>
+    );
+  }
+
+  const shareText = code ? `Viens jouer à ${gameInfo?.name ?? "Wink"} avec moi sur Wink 😏\nOuvre Wink, touche « Rejoindre avec un code » et entre : ${code}\n(Pas encore Wink ? wink.hermannrichy.site)` : "";
 
   return (
     <Screen>
@@ -223,7 +242,13 @@ export function OnlineLobby({
               : "Ensemble, au même endroit : chacun joue sur son téléphone, et les gages se font en vrai 😏. Connexion internet requise."}
           </p>
           <button type="button" disabled={busy} onClick={host} className="brutal press mt-auto h-[60px] rounded-[18px] bg-passion text-lg font-extrabold disabled:opacity-60">
-            {busy ? "CRÉATION…" : "CRÉER LA PARTIE"}
+            {busy ? (
+              <span className="flex items-center justify-center gap-2.5">
+                <Spinner /> CRÉATION…
+              </span>
+            ) : (
+              "CRÉER LA PARTIE"
+            )}
           </button>
         </div>
       )}
@@ -289,7 +314,7 @@ export function OnlineLobby({
             <Mascot size={110} interactive className="float" />
             <p className="text-base font-bold">En attente de ton ou ta partenaire…</p>
             <p className="text-xs font-medium">
-              La partie démarre toute seule dès que l'autre entre le code dans « Rejoindre une partie avec un code ».
+              La partie démarre toute seule dès que l'autre entre le code dans « Rejoindre avec un code ».
             </p>
           </div>
         </div>
@@ -321,7 +346,13 @@ export function OnlineLobby({
             />
           </label>
           <button type="submit" disabled={busy || input.length !== 5} className="brutal press mt-auto h-[60px] rounded-[18px] bg-passion text-lg font-extrabold disabled:opacity-60">
-            {busy ? "CONNEXION…" : "REJOINDRE"}
+            {busy ? (
+              <span className="flex items-center justify-center gap-2.5">
+                <Spinner /> CONNEXION…
+              </span>
+            ) : (
+              "REJOINDRE"
+            )}
           </button>
         </form>
       )}
@@ -333,10 +364,18 @@ export function OnlineLobby({
         </div>
       )}
 
-      {error && (
-        <p role="alert" className="rounded-2xl border-[3px] border-ink bg-passion p-3 text-center text-sm font-bold">
+      {busy && <p role="status" className="text-center text-sm font-semibold">Connexion en cours, ça peut prendre quelques secondes…</p>}
+      {error && !busy && (
+        <div role="alert" className="flex flex-col gap-2 rounded-2xl border-[3px] border-ink bg-passion p-3 text-center text-sm font-bold">
           {error}
-        </p>
+          <button
+            type="button"
+            onClick={() => (lastAction.current === "host" ? void host() : void join())}
+            className="brutal-sm press h-11 rounded-xl bg-cream text-sm font-extrabold"
+          >
+            RÉESSAYER
+          </button>
+        </div>
       )}
       {confirmLeave && <LeaveDialog partnerOnline={partnerOnline} onStay={() => setConfirmLeave(false)} onLeave={() => leave(false)} onEnd={() => leave(true)} />}
     </Screen>
