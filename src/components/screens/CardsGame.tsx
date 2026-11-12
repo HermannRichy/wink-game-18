@@ -6,7 +6,7 @@ import { GAGES, LEVEL_BG, LEVEL_LABEL, LEVEL_ORDER, fill, type Card } from "@/da
 import { freshIndex, markSeen } from "@/lib/seen";
 import { buildDeck, pick, vibrate } from "@/lib/deck";
 import { db, toggleFavorite, type Settings } from "@/lib/db";
-import { Mascot } from "@/components/Mascot";
+import { Mascot, POSES } from "@/components/Mascot";
 import { Icon, Screen, SoundToggle, TopBar } from "@/components/ui";
 import { sfx } from "@/lib/sound";
 
@@ -154,7 +154,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
       <Screen>
         <TopBar onBack={onExit} title="Cartes" />
         <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
-          <Mascot size={170} interactive className="float" />
+          <Mascot size={170} pose={POSES.joyeuse} interactive className="float" />
           <h1 className="text-[40px] font-black leading-[0.95] tracking-[-2px]">
             Pioche <span className="highlight">vidée</span> !
           </h1>

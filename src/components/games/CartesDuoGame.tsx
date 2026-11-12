@@ -8,7 +8,7 @@ import { markSeen } from "@/lib/seen";
 import { sfx } from "@/lib/sound";
 import { vibrate } from "@/lib/deck";
 import { useChallengeTimer } from "@/lib/useChallengeTimer";
-import { Mascot } from "@/components/Mascot";
+import { Mascot, POSES } from "@/components/Mascot";
 import { GameFrame, PLAYER_BG, TimerBlock, WaitingFor } from "@/components/game/common";
 
 const KIND = { question: "QUESTION", defi: "DÉFI", joker: "JOKER" } as const;
@@ -149,7 +149,7 @@ export function CartesDuoGame({ session, soundOn, onExit }: { session: Session<C
 
       {s.phase === "done" && (
         <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
-          <Mascot size={150} interactive className="float" />
+          <Mascot size={150} pose={POSES.joyeuse} interactive className="float" />
           <h1 className="text-[38px] font-black leading-[0.95] tracking-[-2px]">
             Pioche <span className="highlight">vidée</span> !
           </h1>

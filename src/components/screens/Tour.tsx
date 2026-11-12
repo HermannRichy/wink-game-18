@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mascot } from "@/components/Mascot";
+import { Mascot, POSES } from "@/components/Mascot";
 import { Icon } from "@/components/ui";
 import { sfx } from "@/lib/sound";
 import { vibrate } from "@/lib/deck";
@@ -154,7 +154,7 @@ export function Tour({ onDone }: { onDone: () => void }) {
       </div>
 
       <div key={i} className="pop-in flex flex-1 flex-col items-center justify-center gap-5 text-center" aria-live="polite">
-        <Mascot size={i === 0 ? 170 : 110} interactive className="float" />
+        <Mascot size={i === 0 ? 190 : 150} pose={[POSES.brasOuverts, POSES.v, POSES.joyeuse, POSES.salut, POSES.clin][i % 5]} interactive className="float" />
         <span className="font-mono text-xs font-bold tracking-wider">
           {slide.kicker} · {i + 1}/{SLIDES.length}
         </span>

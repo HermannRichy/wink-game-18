@@ -8,7 +8,7 @@ import { db, type Settings } from "@/lib/db";
 import { vibrate } from "@/lib/deck";
 import { sfx } from "@/lib/sound";
 import { Icon, Screen, SoundToggle, TopBar } from "@/components/ui";
-import { Mascot } from "@/components/Mascot";
+import { Mascot, POSES } from "@/components/Mascot";
 
 const LEVEL_BADGE = LEVEL_BG;
 const PLAYER_BG = ["bg-candy", "bg-flame"];
@@ -146,7 +146,7 @@ export function QuizGame({ settings, onExit }: { settings: Settings; onExit: () 
       <Screen>
         <TopBar onBack={onExit} title="Quiz" />
         <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
-          <Mascot size={170} interactive className="float" />
+          <Mascot size={170} pose={POSES.v} interactive className="float" />
           <h1 className="text-[40px] font-black leading-[0.95] tracking-[-2px]">
             Plus aucun <span className="highlight">secret</span> !
           </h1>

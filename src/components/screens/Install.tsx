@@ -1,6 +1,6 @@
 "use client";
 
-import { Mascot } from "@/components/Mascot";
+import { Mascot, POSES } from "@/components/Mascot";
 import { Icon } from "@/components/ui";
 import { saveSettings } from "@/lib/db";
 import { useInstall } from "@/lib/install";
@@ -37,7 +37,7 @@ export function Install() {
       </div>
 
       <div className="flex flex-col items-center gap-5 text-center">
-        <Mascot size={150} interactive label="Mascotte Wink" className="float" />
+        <Mascot size={150} pose={POSES.salut} interactive label="Mascotte Wink" className="float" />
         {installed ? (
           <div className="pop-in flex flex-col gap-3">
             <h1 className="text-[42px] font-black leading-[0.95] tracking-[-2px]">Wink est installé !</h1>

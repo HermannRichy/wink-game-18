@@ -9,7 +9,7 @@ import { freshIndex, markSeen, orderFresh, pickFresh } from "@/lib/seen";
 import type { Settings } from "@/lib/db";
 import { sfx } from "@/lib/sound";
 import { formatTime, useChallengeTimer } from "@/lib/useChallengeTimer";
-import { Mascot } from "@/components/Mascot";
+import { Mascot, POSES } from "@/components/Mascot";
 import { Icon, IconButton, SoundToggle } from "@/components/ui";
 
 // La 3D n'est chargée qu'à l'ouverture du jeu (et reste en cache pour le hors ligne)
@@ -264,7 +264,7 @@ export function TowerGame({ settings, onExit }: { settings: Settings; onExit: ()
         <div className="absolute inset-0 z-30 flex flex-col justify-between bg-passion px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))] text-ink">
           <span className="text-[30px] font-black tracking-[-1.5px]">wink</span>
           <div className="pop-in flex flex-col items-center gap-5 text-center">
-            <Mascot size={150} interactive className="float" />
+            <Mascot size={150} pose={POSES.clin} interactive className="float" />
             <h1 className="text-[40px] font-black leading-[0.95] tracking-[-2px]">
               {names[loser]} a fait tomber <span className="highlight">la tour</span> !
             </h1>

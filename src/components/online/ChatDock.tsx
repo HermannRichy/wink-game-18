@@ -13,7 +13,12 @@ const EMOJIS = ["😀", "😁", "🥰", "😍", "😘", "😉", "🤭", "🙈", 
 const MSG_REACTIONS = ["❤️", "😂", "🔥", "😳", "👍"];
 
 /** m : message · c : défi · r : réaction flottante · e : réaction à un message */
-type Kind = "m" | "c" | "r" | "e" | "v";
+type Kind = "m" | "c" | "r" | "e" | "v" | "s";
+
+/** Autocollants Wink : public/stickers/01..50.webp, envoyés par leur numéro */
+const STICKERS = Array.from({ length: 50 }, (_, i) => String(i + 1).padStart(2, "0"));
+const STICKER_LABEL = "Autocollant";
+const isSticker = (x: string | null) => !!x && STICKERS.includes(x);
 
 /** Message vocal : audio chiffré comme le reste */
 interface Audio {
@@ -44,7 +49,7 @@ interface Msg {
 interface Pending {
   id: string;
   text: string;
-  kind: "m" | "c" | "v";
+  kind: "m" | "c" | "v" | "s";
   q?: Quote;
   a?: Audio;
   status: "sending" | "failed";
@@ -194,12 +199,16 @@ export function ChatProvider({ room, me, names, distance, children }: { room: Ro
         if (plain) {
           try {
             const p = JSON.parse(plain) as Payload;
-            kind = p.k === "r" || p.k === "c" || p.k === "e" || p.k === "v" ? p.k : "m";
+            kind = p.k === "r" || p.k === "c" || p.k === "e" || p.k === "v" || p.k === "s" ? p.k : "m";
             text = String(p.x).slice(0, MAX);
             if (p.q) q = { id: String(p.q.id), text: String(p.q.text).slice(0, 80), from: p.q.from === 1 ? 1 : 0 };
             if (p.to) to = String(p.to);
             if (kind === "v" && p.a && typeof p.a.b === "string") audio = { b: p.a.b, m: String(p.a.m).slice(0, 40), d: Math.min(Number(p.a.d) || 0, MAX_VOICE) };
             else if (kind === "v") kind = "m";
+            if (kind === "s" && !isSticker(text)) {
+              kind = "m";
+              text = STICKER_LABEL;
+            }
           } catch {
             text = null;
           }
@@ -225,8 +234,8 @@ export function ChatProvider({ room, me, names, distance, children }: { room: Ro
       sfx.sparkle();
       const r = [...incoming].reverse().find((m) => m.kind === "r" && m.text);
       if (r) setFloat({ id: Date.now(), emoji: r.text! });
-      const last = [...incoming].reverse().find((m) => (m.kind === "m" || m.kind === "c" || m.kind === "v") && m.text);
-      if (last && !openRef.current) setPreview({ id: Date.now(), name: names[last.from], text: last.kind === "v" ? VOICE_LABEL : last.text! });
+      const last = [...incoming].reverse().find((m) => (m.kind === "m" || m.kind === "c" || m.kind === "v" || m.kind === "s") && m.text);
+      if (last && !openRef.current) setPreview({ id: Date.now(), name: names[last.from], text: last.kind === "v" ? VOICE_LABEL : last.kind === "s" ? `🖼 ${STICKER_LABEL}` : last.text! });
     });
     return () => {
       live = false;
@@ -253,7 +262,7 @@ export function ChatProvider({ room, me, names, distance, children }: { room: Ro
   }, [partnerTyping]);
 
   // Lu / vu : les messages de l'autre sont lus quand le chat est ouvert
-  const visible = useMemo(() => msgs.filter((m) => m.kind === "m" || m.kind === "c" || m.kind === "v"), [msgs]);
+  const visible = useMemo(() => msgs.filter((m) => m.kind === "m" || m.kind === "c" || m.kind === "v" || m.kind === "s"), [msgs]);
   useEffect(() => {
     if (!open) return;
     const unreadIds = visible.filter((m) => m.from !== me && !read.has(m.id)).map((m) => m.id);
@@ -274,12 +283,12 @@ export function ChatProvider({ room, me, names, distance, children }: { room: Ro
       const x = payload.x.trim().slice(0, MAX);
       if ((!x && !payload.a) || !shared) return;
       const pid = retryId ?? `p${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
-      const showPending = payload.k === "m" || payload.k === "c" || payload.k === "v";
+      const showPending = payload.k === "m" || payload.k === "c" || payload.k === "v" || payload.k === "s";
       if (showPending) {
         setPending((list) =>
           list.some((i) => i.id === pid)
             ? list.map((i) => (i.id === pid ? { ...i, status: "sending" } : i))
-            : [...list, { id: pid, text: x, kind: payload.k as "m" | "c" | "v", q: payload.q, a: payload.a, status: "sending" }],
+            : [...list, { id: pid, text: x, kind: payload.k as "m" | "c" | "v" | "s", q: payload.q, a: payload.a, status: "sending" }],
         );
       }
       try {
@@ -379,6 +388,7 @@ function ChatPanel({
 }) {
   const [text, setText] = useState("");
   const [emojis, setEmojis] = useState(false);
+  const [tab, setTab] = useState<"e" | "s">("e");
   const [selected, setSelected] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<Quote | null>(null);
   const end = useRef<HTMLDivElement>(null);
@@ -388,7 +398,7 @@ function ChatPanel({
     void onSend({ k: "v", x: VOICE_LABEL, a });
   });
 
-  const bubbles = msgs.filter((m) => m.kind === "m" || m.kind === "c" || m.kind === "v");
+  const bubbles = msgs.filter((m) => m.kind === "m" || m.kind === "c" || m.kind === "v" || m.kind === "s");
   const reactionsOf = (id: string) => {
     const out = new Map<string, number>();
     msgs.filter((m) => m.kind === "e" && m.to === id && m.text).forEach((m) => out.set(m.text!, (out.get(m.text!) ?? 0) + 1));
@@ -458,7 +468,7 @@ function ChatPanel({
                 </div>
               );
             }
-            if (m.kind !== "m" && m.kind !== "c" && m.kind !== "v") return null;
+            if (m.kind !== "m" && m.kind !== "c" && m.kind !== "v" && m.kind !== "s") return null;
             const mineMsg = m.from === me;
             const rx = reactionsOf(m.id);
             const isSel = selected === m.id;
@@ -469,8 +479,8 @@ function ChatPanel({
                   aria-label="Répondre ou réagir à ce message"
                   aria-expanded={isSel}
                   onClick={() => setSelected(isSel ? null : m.id)}
-                  className={`max-w-[82%] whitespace-pre-wrap break-words rounded-2xl border-[2.5px] border-ink px-3 py-2 text-left text-[15px] font-semibold ${
-                    m.kind === "c" ? "bg-pop" : mineMsg ? "bg-candy" : "bg-flame"
+                  className={`max-w-[82%] whitespace-pre-wrap break-words text-left text-[15px] font-semibold ${
+                    m.kind === "s" ? "p-0" : `rounded-2xl border-[2.5px] border-ink px-3 py-2 ${m.kind === "c" ? "bg-pop" : mineMsg ? "bg-candy" : "bg-flame"}`
                   }`}
                 >
                   {m.kind === "c" && <span className="mb-1 flex items-center gap-1 text-[11px] font-black tracking-wide">🎲 DÉFI</span>}
@@ -480,7 +490,14 @@ function ChatPanel({
                       <span className="line-clamp-2">{m.q.text}</span>
                     </span>
                   )}
-                  {m.kind === "v" && m.audio ? <VoiceBubble a={m.audio} /> : (m.text ?? "🔒 Message illisible")}
+                  {m.kind === "v" && m.audio ? (
+                    <VoiceBubble a={m.audio} />
+                  ) : m.kind === "s" && m.text ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={`/stickers/${m.text}.webp`} alt={`${STICKER_LABEL} ${m.text}`} width={112} height={112} draggable={false} className="h-28 w-28" />
+                  ) : (
+                    (m.text ?? "🔒 Message illisible")
+                  )}
                 </button>
                 {rx.length > 0 && (
                   <span className="-mt-2 flex gap-1">
@@ -512,7 +529,7 @@ function ChatPanel({
                     <button
                       type="button"
                       onClick={() => {
-                        setReplyTo({ id: m.id, text: m.text!.slice(0, 80), from: m.from });
+                        setReplyTo({ id: m.id, text: m.kind === "s" ? `🖼 ${STICKER_LABEL}` : m.text!.slice(0, 80), from: m.from });
                         setSelected(null);
                         input.current?.focus();
                       }}
@@ -539,7 +556,7 @@ function ChatPanel({
                     <span className="line-clamp-2">{p.q.text}</span>
                   </span>
                 )}
-                {p.a ? `🎤 Message vocal · ${p.a.d} s` : p.text}
+                {p.a ? `🎤 Message vocal · ${p.a.d} s` : p.kind === "s" ? `🖼 ${STICKER_LABEL}…` : p.text}
               </span>
               {p.status === "sending" ? (
                 <span className="text-[11px] font-bold">envoi…</span>
@@ -577,12 +594,51 @@ function ChatPanel({
         )}
 
         {emojis && (
-          <div className="grid grid-cols-8 gap-1 rounded-2xl border-[3px] border-ink bg-white/60 p-2">
-            {EMOJIS.map((e) => (
-              <button key={e} type="button" aria-label={e} onClick={() => setText((t) => (t + e).slice(0, MAX))} className="h-9 text-[22px]">
-                {e}
-              </button>
-            ))}
+          <div className="flex flex-col gap-2 rounded-2xl border-[3px] border-ink bg-white/60 p-2">
+            <div className="flex gap-1.5" role="tablist" aria-label="Emojis et autocollants">
+              {([["e", "EMOJIS"], ["s", "AUTOCOLLANTS"]] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === id}
+                  onClick={() => setTab(id)}
+                  className={`rounded-full border-[2.5px] border-ink px-3 py-1 text-[11px] font-black tracking-wide ${tab === id ? "bg-passion" : "bg-cream"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {tab === "e" ? (
+              <div className="grid grid-cols-8 gap-1">
+                {EMOJIS.map((e) => (
+                  <button key={e} type="button" aria-label={e} onClick={() => setText((t) => (t + e).slice(0, MAX))} className="h-9 text-[22px]">
+                    {e}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="grid max-h-[210px] grid-cols-5 gap-1 overflow-y-auto">
+                {STICKERS.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    disabled={!ready}
+                    aria-label={`${STICKER_LABEL} ${id}`}
+                    onClick={() => {
+                      sfx.click();
+                      void onSend({ k: "s", x: id, q: replyTo ?? undefined });
+                      setReplyTo(null);
+                      setEmojis(false);
+                    }}
+                    className="press aspect-square rounded-xl p-0.5 disabled:opacity-50"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/stickers/${id}.webp`} alt="" width={64} height={64} loading="lazy" draggable={false} className="h-full w-full object-contain" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

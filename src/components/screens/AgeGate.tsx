@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mascot } from "@/components/Mascot";
+import { Mascot, POSES } from "@/components/Mascot";
 import { saveSettings } from "@/lib/db";
 import { sfx } from "@/lib/sound";
 
@@ -16,7 +16,7 @@ export function AgeGate() {
       </div>
 
       <div className="flex flex-col items-center gap-6 text-center">
-        <Mascot size={210} interactive label="Mascotte Wink" className="float" />
+        <Mascot size={210} pose={POSES.clin} interactive label="Mascotte Wink" className="float" />
         {refused ? (
           <div className="pop-in flex flex-col gap-3">
             <h1 className="text-[40px] font-black leading-[0.95] tracking-[-2px]">Reviens un peu plus tard.</h1>

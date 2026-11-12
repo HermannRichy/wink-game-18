@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { LEVELS } from "@/data/cards";
 import { GAMES, type GameId, type GameInfo } from "@/data/games";
 import { saveSettings, type Settings } from "@/lib/db";
-import { Mascot } from "@/components/Mascot";
+import { Mascot, POSES } from "@/components/Mascot";
 import { Icon, IconButton, SoundToggle } from "@/components/ui";
 import { sfx } from "@/lib/sound";
 
@@ -102,7 +102,7 @@ export function Home({
           </button>
         </div>
         <div className="absolute -right-4 top-2">
-          <Mascot size={150} interactive label="Mascotte Wink" />
+          <Mascot size={150} pose={POSES.v} interactive label="Mascotte Wink" />
         </div>
       </section>
 

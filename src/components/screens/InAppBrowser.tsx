@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mascot } from "@/components/Mascot";
+import { Mascot, POSES } from "@/components/Mascot";
 import { sfx } from "@/lib/sound";
 
 export type InAppInfo = { app: "Facebook" | "Messenger" | "Instagram"; platform: "android" | "ios" | "other" };
@@ -54,7 +54,7 @@ export function InAppBrowser({ info, onContinue }: { info: InAppInfo; onContinue
       </div>
 
       <div className="flex flex-col items-center gap-5 text-center">
-        <Mascot size={130} interactive label="Mascotte Wink" className="float" />
+        <Mascot size={140} pose={POSES.brasOuverts} interactive label="Mascotte Wink" className="float" />
         <h1 className="text-[40px] font-black leading-[0.95] tracking-[-2px]">
           Ouvre Wink dans <span className="bg-cream px-1.5">{ios ? "Safari" : "Chrome"}</span>
         </h1>

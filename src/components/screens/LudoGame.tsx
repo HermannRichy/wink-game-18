@@ -11,7 +11,7 @@ import { sfx } from "@/lib/sound";
 import { formatTime, useChallengeTimer } from "@/lib/useChallengeTimer";
 import { Dice3D } from "@/components/ludo/Dice3D";
 import { LudoBoard } from "@/components/ludo/LudoBoard";
-import { Mascot } from "@/components/Mascot";
+import { Mascot, POSES } from "@/components/Mascot";
 import { Icon, IconButton, SoundToggle } from "@/components/ui";
 
 type Phase = "roll" | "rolling" | "pick" | "moving" | "event" | "won";
@@ -264,7 +264,7 @@ export function LudoGame({ settings, onExit }: { settings: Settings; onExit: () 
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-5 bg-pop px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1.75rem,env(safe-area-inset-top))]">
         <span className="text-[30px] font-black tracking-[-1.5px]">wink</span>
         <div className="pop-in flex flex-col items-center gap-4 text-center">
-          <Mascot size={130} interactive className="float" />
+          <Mascot size={140} pose={POSES.dynamique} interactive className="float" />
           <h1 className="text-[40px] font-black leading-[0.95] tracking-[-2px]">
             {names[winner]} <span className="bg-cream px-1.5">gagne</span> !
           </h1>

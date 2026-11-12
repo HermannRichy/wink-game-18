@@ -20,7 +20,7 @@ import { QuizGame } from "@/components/screens/QuizGame";
 import { TowerGame } from "@/components/screens/TowerGame";
 import { LudoGame } from "@/components/screens/LudoGame";
 import { UpdateWatcher } from "@/components/UpdateWatcher";
-import { Mascot } from "@/components/Mascot";
+import { Mascot, POSES } from "@/components/Mascot";
 import { LocalDuoGame, DUO_GAMES } from "@/components/games/registry";
 import { OnlineLobby } from "@/components/online/OnlineLobby";
 import type { GameId } from "@/data/games";
@@ -107,7 +107,7 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
   if (!settings || !ready || !seenReady) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-passion">
-        <Mascot size={120} shadow={false} label="Chargement de Wink" />
+        <Mascot size={120} pose={POSES.dynamique} shadow={false} label="Chargement de Wink" />
       </main>
     );
   }
