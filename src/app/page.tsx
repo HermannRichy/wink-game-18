@@ -11,6 +11,7 @@ import { useInstall } from "@/lib/install";
 import { setSoundEnabled } from "@/lib/sound";
 import { AgeGate } from "@/components/screens/AgeGate";
 import { Install } from "@/components/screens/Install";
+import { InAppBrowser, detectInApp, type InAppInfo } from "@/components/screens/InAppBrowser";
 import { Players } from "@/components/screens/Players";
 import { Home } from "@/components/screens/Home";
 import { Help } from "@/components/screens/Help";
@@ -46,6 +47,10 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
   const stored = useLiveQuery(async () => (await db.settings.get("main")) ?? null, []);
   const { ready, standalone } = useInstall();
   const [view, setView] = useState<View>({ name: "home" });
+  const [inApp, setInApp] = useState<InAppInfo | null>(null);
+  useEffect(() => {
+    setInApp(detectInApp(navigator.userAgent));
+  }, []);
   useEffect(() => {
     onBusy(view.name === "game" || view.name === "online");
   }, [view.name, onBusy]);
@@ -96,6 +101,8 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
   useEffect(() => {
     if (settings) setSoundEnabled(settings.soundOn);
   }, [settings?.soundOn]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (inApp) return <InAppBrowser info={inApp} onContinue={() => setInApp(null)} />;
 
   if (!settings || !ready || !seenReady) {
     return (
