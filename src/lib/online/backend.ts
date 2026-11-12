@@ -156,27 +156,32 @@ async function firebaseBackend(): Promise<Backend> {
     player: PlayerInfo,
   ): Promise<JoinResult> {
     await uid();
-    const snap = await db.get(roomRef(code));
-    if (!snap.exists()) return { ok: false, reason: "missing" };
+    // Lecture ciblée (players seulement) et écritures ciblées : réécrire toute la salle
+    // est refusé par les règles dès qu'il existe des messages de chat.
+    const pSnap = await db.get(db.ref(database, `rooms/${code}/players`));
+    if (!pSnap.exists()) return { ok: false, reason: "missing" };
+    const players = pSnap.val() as RoomData["players"];
+    if (players.p0?.uid === player.uid) {
+      await db.set(db.ref(database, `rooms/${code}/players/p0/online`), true);
+      return { ok: true, index: 0 };
+    }
+    if (players.p1?.uid === player.uid) {
+      await db.set(db.ref(database, `rooms/${code}/players/p1`), player);
+      return { ok: true, index: 1 };
+    }
+    if (players.p1) return { ok: false, reason: "full" };
     let result: JoinResult = { ok: false, reason: "full" };
-    await db.runTransaction(roomRef(code), (room: RoomData | null) => {
-      if (!room) {
-        result = { ok: false, reason: "missing" };
-        return room;
-      }
-      if (room.players.p0?.uid === player.uid) {
-        result = { ok: true, index: 0 };
-        room.players.p0 = { ...room.players.p0, online: true };
-        return room;
-      }
-      if (room.players.p1?.uid === player.uid || !room.players.p1) {
+    await db.runTransaction(
+      db.ref(database, `rooms/${code}/players/p1`),
+      (cur: PlayerInfo | null) => {
+        if (cur && cur.uid !== player.uid) {
+          result = { ok: false, reason: "full" };
+          return undefined;
+        }
         result = { ok: true, index: 1 };
-        room.players.p1 = player;
-        return room;
-      }
-      result = { ok: false, reason: "full" };
-      return undefined;
-    });
+        return player;
+      },
+    );
     return result;
   }
 

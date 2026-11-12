@@ -12,6 +12,13 @@ import { DUO_GAMES, OnlineDuoGame } from "@/components/games/registry";
 import { Mascot } from "@/components/Mascot";
 import { Icon, Screen, Spinner, TopBar } from "@/components/ui";
 
+function errHint(e: unknown) {
+  const code = String((e as { code?: string })?.code ?? (e as Error)?.message ?? "");
+  if (/permission/i.test(code)) return "Accès refusé (règles Firebase à republier). [" + code + "]";
+  if (/auth|api-key|domain/i.test(code)) return "Connexion au service refusée. [" + code + "]";
+  return "Vérifie ta connexion internet." + (code ? " [" + code.slice(0, 60) + "]" : "");
+}
+
 export function OnlineLobby({
   settings,
   create,
@@ -84,7 +91,7 @@ export function OnlineLobby({
       sfx.success();
     } catch (e) {
       console.error(e);
-      setError("Impossible de créer la partie. Vérifie ta connexion internet.");
+      setError(`Impossible de créer la partie. ${errHint(e)}`);
     } finally {
       setBusy(false);
     }
@@ -115,7 +122,7 @@ export function OnlineLobby({
       vibrate([30, 30, 30]);
     } catch (e) {
       console.error(e);
-      setError("Impossible de rejoindre. Vérifie ta connexion internet.");
+      setError(`Impossible de rejoindre. ${errHint(e)}`);
     } finally {
       setBusy(false);
     }
