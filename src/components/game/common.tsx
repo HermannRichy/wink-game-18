@@ -1,7 +1,7 @@
 "use client";
 
 import { ChatButton } from "@/components/online/ChatDock";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { formatTime, type useChallengeTimer } from "@/lib/useChallengeTimer";
 import { sfx } from "@/lib/sound";
 import { Icon, IconButton, SoundToggle } from "@/components/ui";
@@ -27,6 +27,17 @@ export function GameFrame({
   className?: string;
   children: ReactNode;
 }) {
+  // Petite coupure (changement d'appli, réseau qui saute) : on attend 20 s avant d'alerter
+  const [away, setAway] = useState(false);
+  useEffect(() => {
+    if (partnerOnline) {
+      setAway(false);
+      return;
+    }
+    const t = setTimeout(() => setAway(true), 20000);
+    return () => clearTimeout(t);
+  }, [partnerOnline]);
+  const alert = !partnerOnline && away;
   return (
     <main
       className={`mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] ${className}`}
@@ -45,12 +56,12 @@ export function GameFrame({
       </div>
       {mode !== "local" && (
         <div className="flex items-center gap-2">
-          <div className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-[2.5px] border-ink px-3 py-1.5 text-xs font-extrabold ${partnerOnline ? "bg-cream" : "bg-pop"}`} role="status">
-            <span className={`h-2.5 w-2.5 shrink-0 rounded-full border-2 border-ink ${partnerOnline ? "bg-[#3DDC84]" : "bg-muted"}`} />
+          <div className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-[2.5px] border-ink px-3 py-1.5 text-xs font-extrabold ${alert ? "bg-pop" : "bg-cream"}`} role="status">
+            <span className={`h-2.5 w-2.5 shrink-0 rounded-full border-2 border-ink ${alert ? "bg-muted" : "bg-[#3DDC84]"}`} />
             <span className="truncate">
-              {partnerOnline
-                ? `${mode === "distance" ? "À DISTANCE" : "MODE DUO"} AVEC ${partnerName.toUpperCase()}`
-                : `${partnerName.toUpperCase()} N'EST PLUS CONNECTÉ·E…`}
+              {alert
+                ? `${partnerName.toUpperCase()} SE RECONNECTE…`
+                : `${mode === "distance" ? "À DISTANCE" : "MODE DUO"} AVEC ${partnerName.toUpperCase()}`}
             </span>
           </div>
           <ChatButton />

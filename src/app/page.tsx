@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, DEFAULT_SETTINGS, saveSettings } from "@/lib/db";
-import { lastRoom, sweepOldRooms, type KnownRoom } from "@/lib/online/last-room";
+import { activeRoom, lastRoom, sweepOldRooms, type KnownRoom } from "@/lib/online/last-room";
 import { track } from "@/lib/analytics";
 import { loadSeen } from "@/lib/seen";
 import { Tour } from "@/components/screens/Tour";
@@ -80,6 +80,16 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
     void sweepOldRooms().then(() => setResume(lastRoom()));
   }, []);
   const settings = stored === undefined ? undefined : { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
+
+  // App rouverte en pleine partie (fermée par le téléphone, par exemple) : on y retourne directement
+  const autoResumed = useRef(false);
+  const readyToResume = !!settings?.ageConfirmed && !!settings?.tourDone && ready && seenReady;
+  useEffect(() => {
+    if (!readyToResume || autoResumed.current) return;
+    autoResumed.current = true;
+    const a = activeRoom();
+    if (a && view.name === "home") setView({ name: "online", code: a.code, resume: true });
+  }, [readyToResume]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (settings) setSoundEnabled(settings.soundOn);

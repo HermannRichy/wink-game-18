@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { GAMES, type GameId } from "@/data/games";
 import type { Settings } from "@/lib/db";
 import { getBackend, newRoomCode, normalizeCode, type PlayerInfo } from "@/lib/online/backend";
-import { forgetRoom, rememberRoom } from "@/lib/online/last-room";
+import { forgetRoom, rememberRoom, setActiveRoom } from "@/lib/online/last-room";
 import { useRoom } from "@/lib/online/session";
 import { sfx } from "@/lib/sound";
 import { vibrate } from "@/lib/deck";
@@ -135,8 +135,15 @@ export function OnlineLobby({
     if (code && roomGame && me !== null) rememberRoom(code, roomGame);
   }, [code, roomGame, me]);
   useEffect(() => {
-    if (code && room === null) forgetRoom(code);
+    if (code && room === null) {
+      forgetRoom(code);
+      setActiveRoom(null);
+    }
   }, [code, room]);
+  const playing = !!(room && me !== null && room.players.p0 && room.players.p1);
+  useEffect(() => {
+    if (code && playing) setActiveRoom(code);
+  }, [code, playing]);
 
   // Reprise d'une partie : on rejoint tout de suite
   const autoDone = useRef(false);
@@ -154,6 +161,7 @@ export function OnlineLobby({
   async function leave(endForAll = false) {
     presenceOff.current?.();
     presenceOff.current = null;
+    setActiveRoom(null);
     if (code && (endForAll || !partnerOnline)) {
       const b = await getBackend();
       void b.remove(code);

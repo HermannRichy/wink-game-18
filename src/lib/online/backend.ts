@@ -156,9 +156,21 @@ async function firebaseBackend(): Promise<Backend> {
     },
     presence(code, index) {
       const onlineRef = db.ref(database, `rooms/${code}/players/p${index}/online`);
-      void db.set(onlineRef, true);
-      void db.onDisconnect(onlineRef).set(false);
+      // À chaque (re)connexion : on se remet « en ligne » et on réarme la détection de coupure
+      const stopConn = db.onValue(db.ref(database, ".info/connected"), (snap) => {
+        if (snap.val() === true) {
+          void db.onDisconnect(onlineRef).set(false);
+          void db.set(onlineRef, true);
+        }
+      });
+      // Retour de l'app au premier plan
+      const onVisible = () => {
+        if (document.visibilityState === "visible") void db.set(onlineRef, true);
+      };
+      document.addEventListener("visibilitychange", onVisible);
       return () => {
+        stopConn();
+        document.removeEventListener("visibilitychange", onVisible);
         void db.set(onlineRef, false);
       };
     },
@@ -269,9 +281,14 @@ function localBackend(): Backend {
       };
       set(true);
       const off = () => set(false);
+      const onVisible = () => {
+        if (document.visibilityState === "visible") set(true);
+      };
       window.addEventListener("pagehide", off);
+      document.addEventListener("visibilitychange", onVisible);
       return () => {
         window.removeEventListener("pagehide", off);
+        document.removeEventListener("visibilitychange", onVisible);
         off();
       };
     },

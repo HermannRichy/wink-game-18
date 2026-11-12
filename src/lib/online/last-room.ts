@@ -62,3 +62,24 @@ export async function sweepOldRooms() {
     /* hors ligne ou connexion impossible */
   }
 }
+
+const ACTIVE = "wink-active-room";
+
+/** Partie en cours : à la réouverture de l'app, on y retourne directement */
+export function setActiveRoom(code: string | null) {
+  try {
+    if (code) localStorage.setItem(ACTIVE, code);
+    else localStorage.removeItem(ACTIVE);
+  } catch {
+    /* stockage indisponible */
+  }
+}
+
+export function activeRoom(): KnownRoom | null {
+  try {
+    const code = localStorage.getItem(ACTIVE);
+    return read().find((r) => r.code === code && Date.now() - r.t < ROOM_TTL) ?? null;
+  } catch {
+    return null;
+  }
+}
