@@ -25,7 +25,7 @@ export function AovGame({ session, soundOn, onExit }: { session: Session<AovStat
   // Nouvelle carte : son + décompte si défi chronométré (sur les deux téléphones)
   useEffect(() => {
     if (s.phase === "show" && card) {
-      markSeen("aov", card.id);
+      markSeen("aov", card.id, card.text);
       sfx.swoosh();
       vibrate(25);
       timer.arm(card.seconds);

@@ -15,7 +15,7 @@ import { stat, statOpen } from "@/lib/stats";
 import { refreshContent, setContentBusy } from "@/lib/content";
 import { getBackend } from "@/lib/online/backend";
 import { InAppBrowser, detectInApp, type InAppInfo } from "@/components/screens/InAppBrowser";
-import { Players } from "@/components/screens/Players";
+import { PartnerSheet, Players } from "@/components/screens/Players";
 import { Home } from "@/components/screens/Home";
 import { Help } from "@/components/screens/Help";
 import { CardsGame } from "@/components/screens/CardsGame";
@@ -51,6 +51,10 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
   const { ready, standalone } = useInstall();
   const [view, setView] = useState<View>({ name: "home" });
   const [inApp, setInApp] = useState<InAppInfo | null>(null);
+  // Jeu sur un seul téléphone en attente du prénom du ou de la partenaire
+  const [askPartner, setAskPartner] = useState<GameId | null>(null);
+  // Arrivée par un lien d'invitation : on va droit à la partie (visite et installation après)
+  const [viaLink, setViaLink] = useState(false);
   useEffect(() => {
     const info = detectInApp(navigator.userAgent);
     setInApp(info);
@@ -81,6 +85,7 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
       const params = new URLSearchParams(window.location.search);
       const join = params.get("join");
       if (join) {
+        setViaLink(true);
         setView({ name: "online", code: join });
         params.delete("join");
         const q = params.toString();
@@ -128,7 +133,8 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
 
   // 1. Âge  2. Installation (seulement dans le navigateur)  3. Prénoms
   if (!settings.ageConfirmed) return <AgeGate />;
-  if (!settings.tourDone || view.name === "tour") {
+  const joining = viaLink && view.name === "online";
+  if ((!settings.tourDone && !joining) || view.name === "tour") {
     return (
       <Tour
         onDone={() => {
@@ -139,9 +145,10 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
       />
     );
   }
-  if (!standalone && !settings.installSkipped) return <Install />;
-  if (!settings.player1 || !settings.player2 || !settings.player1Gender || !settings.player2Gender) {
-    return <Players settings={settings} onDone={() => setView((v) => (v.name === "online" ? v : { name: "home" }))} />;
+  if (!standalone && !settings.installSkipped && !joining) return <Install />;
+  // Seule ton identité est obligatoire (prénom + genre). Celle du ou de la partenaire est demandée au besoin.
+  if (!settings.player1 || !settings.player1Gender) {
+    return <Players settings={settings} join={joining} onDone={() => setView((v) => (v.name === "online" ? v : { name: "home" }))} />;
   }
 
   if (view.name === "help") return <Help onBack={home} />;
@@ -181,14 +188,28 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
     }
   }
 
+  const startLocal = (game: GameId) => {
+    track("game_start", { game, mode: "local" });
+    stat(`g_${game}`);
+    stat("m_local");
+    setView({ name: "game", game });
+  };
+
   return (
+    <>
     <Home
       settings={settings}
       onPlay={(game, mode) => {
+        if (mode === "local") {
+          // Un seul téléphone : il faut le prénom du ou de la partenaire
+          if (!settings.player2 || !settings.player2Gender) setAskPartner(game);
+          else startLocal(game);
+          return;
+        }
         track("game_start", { game, mode });
         stat(`g_${game}`);
         stat(`m_${mode}`);
-        setView(mode === "local" ? { name: "game", game } : { name: "online", game, mode });
+        setView({ name: "online", game, mode });
       }}
       onJoin={() => setView({ name: "online" })}
       resume={resume ? { code: resume.code, game: resume.game } : null}
@@ -196,5 +217,17 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
       onSettings={() => setView({ name: "settings" })}
       onHelp={() => setView({ name: "help" })}
     />
+    {askPartner && (
+      <PartnerSheet
+        settings={settings}
+        onCancel={() => setAskPartner(null)}
+        onDone={() => {
+          const g = askPartner;
+          setAskPartner(null);
+          startLocal(g);
+        }}
+      />
+    )}
+    </>
   );
 }

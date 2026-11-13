@@ -28,7 +28,7 @@ export function CartesDuoGame({ session, soundOn, onExit }: { session: Session<C
 
   useEffect(() => {
     if (s.phase === "show" && card) {
-      markSeen("cartes", card.id);
+      markSeen("cartes", card.id, card.text);
       sfx.swoosh();
       vibrate(25);
       if (card.kind === "joker") sfx.sparkle();

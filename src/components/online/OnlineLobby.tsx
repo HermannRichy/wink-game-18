@@ -9,6 +9,7 @@ import { forgetRoom, rememberRoom, setActiveRoom } from "@/lib/online/last-room"
 import { useRoom } from "@/lib/online/session";
 import { sfx } from "@/lib/sound";
 import { vibrate } from "@/lib/deck";
+import { recentSeenKeys, setPartnerSeen } from "@/lib/seen";
 import { DUO_GAMES, OnlineDuoGame } from "@/components/games/registry";
 import { Mascot } from "@/components/Mascot";
 import { Icon, Screen, Spinner, TopBar } from "@/components/ui";
@@ -143,6 +144,21 @@ export function OnlineLobby({
   }, [partnerJoined, me]);
 
   useEffect(() => () => presenceOff.current?.(), []);
+
+  // Anti-répétition commune : chaque téléphone partage ce qu'il a déjà vu, le tirage évite les deux
+  useEffect(() => {
+    if (!code || me === null) return;
+    void getBackend().then((b) => b.setHistory(code, me, JSON.stringify(recentSeenKeys())));
+  }, [code, me]);
+  const partnerHistory = me === null ? undefined : room?.history?.[`p${1 - me}` as "p0" | "p1"];
+  useEffect(() => {
+    try {
+      setPartnerSeen(partnerHistory ? (JSON.parse(partnerHistory) as string[]) : []);
+    } catch {
+      setPartnerSeen([]);
+    }
+  }, [partnerHistory]);
+  useEffect(() => () => setPartnerSeen([]), []);
 
   // On retient la partie pour pouvoir la reprendre
   const roomGame = room?.game;
@@ -305,7 +321,7 @@ export function OnlineLobby({
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 text-center">
-              <p className="text-base font-bold">Montre ce code à {settings.player2}, à côté de toi.</p>
+              <p className="text-base font-bold">Montre ce code à {settings.player2 || "ton ou ta partenaire"}, à côté de toi.</p>
               <button
                 type="button"
                 onClick={async () => {
@@ -325,7 +341,7 @@ export function OnlineLobby({
           )}
           <div className="mt-auto flex flex-col items-center gap-3 text-center">
             <Mascot size={110} interactive className="float" />
-            <p className="text-base font-bold">En attente de {settings.player2}…</p>
+            <p className="text-base font-bold">En attente de {settings.player2 || "ton ou ta partenaire"}…</p>
             <p className="text-xs font-medium">
               La partie démarre toute seule dès que l'autre entre le code dans « Rejoindre avec un code ».
             </p>
@@ -345,7 +361,7 @@ export function OnlineLobby({
           <h1 className="text-[40px] font-black leading-[0.95] tracking-[-2px]">
             Rejoindre une <span className="highlight">partie</span>.
           </h1>
-          <p className="-mt-2 text-base font-medium">Entre le code affiché sur le téléphone de {settings.player2} (Mode Duo) ou reçu par message (Mode Distance).</p>
+          <p className="-mt-2 text-base font-medium">Entre le code affiché sur le téléphone de {settings.player2 || "ton ou ta partenaire"} (Mode Duo) ou reçu par message (Mode Distance).</p>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-bold">Code de la partie</span>
             <input

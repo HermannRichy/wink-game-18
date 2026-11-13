@@ -5,16 +5,19 @@ import { db } from "@/lib/db";
 /**
  * Mémoire anti-répétition : chaque question, défi ou gage joué est retenu (par portée),
  * et ne revient qu'une fois tout le stock de cette portée épuisé.
+ * - Le texte est aussi retenu : un texte déjà vu dans un jeu (Cartes) n'est pas reproposé dans un autre (Action ou Vérité).
+ * - En ligne, la mémoire de l'autre téléphone s'ajoute à la nôtre (voir setPartnerSeen).
  * Cache en mémoire (lecture synchrone) + sauvegarde dans IndexedDB.
  */
-let cache = new Set<string>();
+const when = new Map<string, number>();
+let partner = new Set<string>();
 let loaded: Promise<void> | null = null;
 
 export function loadSeen() {
   loaded ??= db.seen
     .toArray()
     .then((rows) => {
-      cache = new Set(rows.map((r) => r.key));
+      for (const r of rows) when.set(r.key, r.at ?? 0);
     })
     .catch(() => {});
   return loaded;
@@ -22,20 +25,49 @@ export function loadSeen() {
 
 const k = (scope: string, id: string) => `${scope}:${id}`;
 
+/** Empreinte d'un texte (sans accents, ponctuation ni prénoms) pour reconnaître le même texte d'un jeu à l'autre */
+export function textKey(text: string) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\{(moi|toi)\}/g, "")
+    .replace(/[^a-z0-9]+/g, "")
+    .slice(0, 80);
+}
+
 export function isSeen(scope: string, id: string) {
-  return cache.has(k(scope, id));
-}
-
-export function markSeen(scope: string, id: string) {
   const key = k(scope, id);
-  if (cache.has(key)) return;
-  cache.add(key);
-  void db.seen.put({ key, at: Date.now() }).catch(() => {});
+  return when.has(key) || partner.has(key);
 }
 
-function reset(scope: string, ids: string[]) {
-  const keys = ids.map((id) => k(scope, id));
-  keys.forEach((key) => cache.delete(key));
+export function isSeenText(text: string) {
+  return when.has(k("txt", textKey(text)));
+}
+
+/** Pas encore vu, ni par son identifiant, ni par son texte */
+export function isFresh(scope: string, id: string, text?: string) {
+  return !isSeen(scope, id) && !(text && isSeenText(text));
+}
+
+function put(key: string) {
+  if (when.has(key)) return;
+  const at = Date.now();
+  when.set(key, at);
+  void db.seen.put({ key, at }).catch(() => {});
+}
+
+export function markSeen(scope: string, id: string, text?: string) {
+  put(k(scope, id));
+  if (text) put(k("txt", textKey(text)));
+}
+
+function reset(scope: string, ids: string[], texts: string[] = []) {
+  const keys = [...ids.map((id) => k(scope, id)), ...texts.map((t) => k("txt", textKey(t)))];
+  keys.forEach((key) => {
+    when.delete(key);
+    partner.delete(key);
+  });
   void db.seen.bulkDelete(keys).catch(() => {});
 }
 
@@ -74,6 +106,20 @@ export function orderFresh<T>(scope: string, list: T[], id: (t: T) => string): T
   return [...shuffle(fresh), ...shuffle(old)];
 }
 
-export function resetScope(scope: string, ids: string[]) {
-  reset(scope, ids);
+export function resetScope(scope: string, ids: string[], texts?: string[]) {
+  reset(scope, ids, texts);
+}
+
+/** En ligne : ce que l'autre téléphone a déjà vu (identifiants « portée:id ») */
+export function setPartnerSeen(keys: string[]) {
+  partner = new Set(keys);
+}
+
+/** Ce que ce téléphone a vu récemment, à partager avec l'autre en ligne */
+export function recentSeenKeys(scopes = ["cartes", "aov", "gages", "gages-distance"], n = 300) {
+  return [...when.entries()]
+    .filter(([key]) => scopes.some((s) => key.startsWith(`${s}:`)))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n)
+    .map(([key]) => key);
 }

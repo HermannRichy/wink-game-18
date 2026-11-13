@@ -43,6 +43,8 @@ export interface RoomData {
   away?: { p0?: number; p1?: number };
   /** Dernier message de l'autre vu par ce joueur (horodatage du message) */
   seen?: { p0?: number; p1?: number };
+  /** Questions et défis déjà vus par chaque joueur (anti-répétition commune aux deux téléphones) */
+  history?: { p0?: string; p1?: string };
 }
 
 export type JoinResult =
@@ -61,6 +63,7 @@ export interface Backend {
   setTyping(code: string, index: 0 | 1): void;
   setAway(code: string, index: 0 | 1, away: boolean): void;
   setSeen(code: string, index: 0 | 1, t: number): void;
+  setHistory(code: string, index: 0 | 1, json: string): void;
   /** Marque le joueur en ligne, et hors ligne s'il perd la connexion */
   presence(code: string, index: 0 | 1): () => void;
   remove(code: string): Promise<void>;
@@ -252,6 +255,9 @@ async function firebaseBackend(): Promise<Backend> {
     setSeen(code, index, t) {
       void db.set(db.ref(database, `rooms/${code}/seen/p${index}`), t);
     },
+    setHistory(code, index, json) {
+      void db.set(db.ref(database, `rooms/${code}/history/p${index}`), json).catch(() => {});
+    },
     presence(code, index) {
       const onlineRef = db.ref(
         database,
@@ -441,6 +447,12 @@ function localBackend(): Backend {
       const room = read(code);
       if (!room) return;
       room.typing = { ...room.typing, [`p${index}`]: Date.now() };
+      write(code, room);
+    },
+    setHistory(code, index, json) {
+      const room = read(code);
+      if (!room) return;
+      room.history = { ...room.history, [`p${index}`]: json };
       write(code, room);
     },
     setSeen(code, index, t) {

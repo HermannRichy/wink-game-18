@@ -2,7 +2,7 @@ import { CARDS, LEVEL_ORDER, gagesFor, type Card, type Level } from "@/data/card
 import { quizFor } from "@/data/quiz";
 import { buildDeck } from "@/lib/deck";
 import { AOV, AOV_DISTANCE, DISTANCE_DUO, DUO_CHALLENGES, type AovKind } from "@/data/aov";
-import { freshIndex, isSeen } from "@/lib/seen";
+import { freshIndex, isFresh } from "@/lib/seen";
 import type { GameModule, InitOpts } from "@/lib/online/session";
 
 const rnd = (n: number) => Math.floor(Math.random() * n);
@@ -34,9 +34,11 @@ export function aovPool(distance?: boolean) {
 function pickAov(kind: AovKind, s: AovState) {
   const maxIdx = LEVEL_ORDER.indexOf(s.maxLevel);
   // L'intensité monte toutes les 6 cartes, sans dépasser le niveau max
-  const reach = Math.min(maxIdx, Math.floor(s.count / 6));
+  // Départ sur Flirt et Doux (pas toujours les mêmes Flirt), puis un cran toutes les 6 cartes
+  const reach = Math.min(maxIdx, 1 + Math.floor(s.count / 6));
   const all = aovPool(s.distance).filter((c) => c.kind === kind);
-  const fresh = (c: (typeof all)[number]) => !s.used.includes(c.id) && !isSeen("aov", c.id);
+  // Ni déjà joué dans la partie, ni vu sur l'un des deux téléphones, ni vu dans les Cartes (même texte)
+  const fresh = (c: (typeof all)[number]) => !s.used.includes(c.id) && isFresh("aov", c.id, c.text);
   let pool = all.filter((c) => LEVEL_ORDER.indexOf(c.level) <= reach && fresh(c));
   if (pool.length === 0) pool = all.filter((c) => LEVEL_ORDER.indexOf(c.level) <= maxIdx && fresh(c));
   if (pool.length === 0) pool = all.filter((c) => LEVEL_ORDER.indexOf(c.level) <= maxIdx);
@@ -244,8 +246,25 @@ export const cartesModule: GameModule<CartesState, CartesAction> = {
     if (actor !== s.turn) return s;
     const card = cartesPool(s.distance).find((c) => c.id === s.deck[s.index]);
     switch (a.t) {
-      case "draw":
-        return s.phase === "draw" ? { ...s, phase: "show" } : s;
+      case "draw": {
+        if (s.phase !== "draw") return s;
+        // Le paquet a été préparé par le premier téléphone : on évite aussi ce que l'autre a déjà vu
+        const pool = cartesPool(s.distance);
+        const freshAt = (i: number) => {
+          const c = pool.find((x) => x.id === s.deck[i]);
+          return !c || isFresh("cartes", c.id, c.text);
+        };
+        if (!freshAt(s.index)) {
+          for (let j = s.index + 1; j < Math.min(s.deck.length, s.index + 20); j++) {
+            if (freshAt(j)) {
+              const deck = [...s.deck];
+              [deck[s.index], deck[j]] = [deck[j], deck[s.index]];
+              return { ...s, deck, phase: "show" };
+            }
+          }
+        }
+        return { ...s, phase: "show" };
+      }
       case "done":
         return s.phase === "show" ? { ...nextCard(s), together: false } : s;
       case "refuse":

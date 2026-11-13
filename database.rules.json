@@ -62,6 +62,11 @@
         "seen": {
           "$p": { ".validate": "($p === 'p0' || $p === 'p1') && newData.isNumber()" }
         },
+        "history": {
+          "$p": {
+            ".validate": "($p === 'p0' || $p === 'p1') && newData.isString() && newData.val().length < 6000"
+          }
+        },
         "chat": {
           "$id": {
             ".validate": "newData.hasChildren(['f', 'iv', 'ct', 't']) && (newData.child('f').val() === 0 || newData.child('f').val() === 1) && root.child('rooms/' + $code + '/players/p' + newData.child('f').val() + '/uid').val() === auth.uid",

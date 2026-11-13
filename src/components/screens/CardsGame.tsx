@@ -98,7 +98,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
     sfx.swoosh();
     vibrate(25);
     setFlipped(true);
-    if (card) markSeen("cartes", card.id);
+    if (card) markSeen("cartes", card.id, card.text);
     if (card?.seconds) setPrep(PREP_SECONDS);
   }
 

@@ -109,7 +109,7 @@ export function Home({
           <div>
             <span className="font-mono text-[10px] font-bold tracking-[0.14em]">CE SOIR</span>
             <span className="block truncate text-[27px] font-black leading-[1.05] tracking-[-1px]">
-              {settings.player1} &amp; {settings.player2}
+              {settings.player2 ? <>{settings.player1} &amp; {settings.player2}</> : settings.player1}
             </span>
           </div>
           <button type="button" onClick={onSettings} className="self-start rounded-full border-[2.5px] border-ink bg-cream px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide">
