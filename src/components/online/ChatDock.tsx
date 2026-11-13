@@ -68,6 +68,7 @@ interface Ctx {
   partnerAway: boolean;
   myAway: boolean;
   toggleAway: () => void;
+  partnerTyping: boolean;
 }
 const ChatCtx = createContext<Ctx | null>(null);
 
@@ -88,18 +89,18 @@ export function ChatButton() {
           aria-pressed={c.myAway}
           title="Je pars faire le défi"
           onClick={c.toggleAway}
-          className={`brutal-sm press flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${c.myAway ? "bg-flame" : "bg-cream"}`}
+          className={`brutal-sm press flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] ${c.myAway ? "bg-flame" : "bg-white"}`}
         >
-          <Icon name="phone" size={18} />
+          <Icon name="phone" size={20} />
         </button>
       )}
       <button
         type="button"
         aria-label={c.unread ? `Ouvrir le chat, ${c.unread} nouveau(x) message(s)` : "Ouvrir le chat"}
         onClick={c.open}
-        className="brutal-sm press relative flex h-9 shrink-0 items-center gap-1 rounded-full bg-pop px-3 text-xs font-extrabold"
+        className="brutal-sm press relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-pop"
       >
-        <Icon name="chat" size={18} /> CHAT
+        <Icon name="chat" size={20} />
         {c.unread > 0 && (
           <span className="absolute -right-1.5 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-passion px-1 text-[11px] font-black">{c.unread}</span>
         )}
@@ -320,7 +321,7 @@ export function ChatProvider({ room, me, names, distance, children }: { room: Ro
     void getBackend().then((b) => b.setTyping(code, me));
   }, [code, me]);
 
-  const ctx = useMemo(() => ({ open: openPanel, unread, distance, partnerAway, myAway, toggleAway }), [openPanel, unread, distance, partnerAway, myAway, toggleAway]);
+  const ctx = useMemo(() => ({ open: openPanel, unread, distance, partnerAway, myAway, toggleAway, partnerTyping: typingNow }), [openPanel, unread, distance, partnerAway, myAway, toggleAway, typingNow]);
 
   return (
     <ChatCtx.Provider value={ctx}>

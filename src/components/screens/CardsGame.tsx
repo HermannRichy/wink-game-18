@@ -6,14 +6,14 @@ import { GAGES, LEVEL_BG, LEVEL_LABEL, LEVEL_ORDER, fill, type Card } from "@/da
 import { freshIndex, markSeen } from "@/lib/seen";
 import { buildDeck, pick, vibrate } from "@/lib/deck";
 import { db, toggleFavorite, type Settings } from "@/lib/db";
-import { Mascot, POSES } from "@/components/Mascot";
-import { Icon, Screen, SoundToggle, TopBar } from "@/components/ui";
+import { Mascot } from "@/components/Mascot";
+import { Icon } from "@/components/ui";
+import { ActionBar, GameEnd, GameFrame, TurnBanner } from "@/components/game/common";
 import { sfx } from "@/lib/sound";
 
 const PREP_SECONDS = 10;
 
 const KIND_LABEL: Record<Card["kind"], string> = { question: "QUESTION", defi: "DÉFI", joker: "JOKER" };
-const PLAYER_BG = ["bg-candy", "bg-flame"];
 
 function formatTime(s: number) {
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
@@ -30,6 +30,10 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
   const [askPass, setAskPass] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [prep, setPrep] = useState<number | null>(null);
+  const [doneCount, setDoneCount] = useState(0);
+  const [refused, setRefused] = useState(0);
+  const [highlight, setHighlight] = useState<string | undefined>();
+  const [ended, setEnded] = useState(false);
 
   const names = [settings.player1, settings.player2];
   const moi = names[turn];
@@ -99,6 +103,8 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
   }
 
   function done() {
+    setDoneCount((n) => n + 1);
+    if (card && card.kind === "defi") setHighlight(fill(card.text, moi, toi, g));
     sfx.success();
     vibrate(15);
     setTogether(false);
@@ -106,6 +112,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
   }
 
   function refuse() {
+    setRefused((n) => n + 1);
     setPrep(null);
     setTimeLeft(null);
     if (passes[turn] > 0) {
@@ -147,169 +154,127 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
     setPasses([0, 0]);
     setTogether(false);
     setFlipped(false);
+    setDoneCount(0);
+    setRefused(0);
+    setHighlight(undefined);
+    setEnded(false);
   }
 
-  if (finished) {
-    return (
-      <Screen>
-        <TopBar onBack={onExit} title="Cartes" />
-        <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
-          <Mascot size={170} pose={POSES.joyeuse} interactive className="float" />
-          <h1 className="text-[40px] font-black leading-[0.95] tracking-[-2px]">
-            Pioche <span className="highlight">vidée</span> !
-          </h1>
-          <p className="text-base font-medium">Vous avez joué les {deck.length} cartes. La suite se passe sans écran 😏</p>
-        </div>
-        <button type="button" onClick={restart} className="brutal press h-[60px] rounded-[18px] bg-passion text-lg font-extrabold">
-          REJOUER
-        </button>
-      </Screen>
+  // Quitter après quelques cartes : on montre d'abord le bilan de la soirée
+  function exit() {
+    if (index >= 3 && !ended) {
+      setEnded(true);
+      return;
+    }
+    onExit();
+  }
+
+  const frame = (children: React.ReactNode, counter?: string) => (
+    <GameFrame title="Cartes" game="cartes" counter={counter} soundOn={settings.soundOn} onExit={exit} mode="local" partnerOnline partnerName={toi}>
+      {children}
+    </GameFrame>
+  );
+
+  if (finished || ended) {
+    return frame(
+      <GameEnd
+        label={finished ? "PIOCHE VIDÉE" : "SOIRÉE TERMINÉE"}
+        title={
+          <>
+            Belle partie,
+            <br />
+            {names[0]} &amp; {names[1]}.
+          </>
+        }
+        stats={[
+          { value: Math.min(index, deck.length), label: "cartes piochées" },
+          { value: doneCount, label: "défis relevés" },
+          { value: refused, label: "refusés" },
+        ]}
+        highlight={highlight}
+        replayLabel={finished ? "Rejouer aux Cartes" : "Reprendre la partie"}
+        onReplay={finished ? restart : () => setEnded(false)}
+        onExit={onExit}
+      />,
     );
   }
 
   const levelIdx = LEVEL_ORDER.indexOf(card.level);
   const maxIdx = LEVEL_ORDER.indexOf(settings.maxLevel);
-  const progress = (index + 1) / deck.length;
 
-  return (
-    <Screen>
-      <TopBar
-        onBack={onExit}
-        title="Cartes"
-        right={
-          <span className="flex items-center gap-2.5">
-            <span className="font-mono text-[13px] font-bold">
-              {index + 1}/{deck.length}
-            </span>
-            <SoundToggle on={settings.soundOn} />
-          </span>
-        }
+  return frame(
+    <>
+      <TurnBanner
+        name={moi}
+        right={together ? "À DEUX" : passes[turn] > 0 ? `JOKER ×${passes[turn]}` : `${toi.toUpperCase()} REGARDE`}
       />
 
-      <div className="flex flex-col gap-2">
-        <div className="flex justify-between text-xs font-bold">
-          {LEVEL_ORDER.slice(0, maxIdx + 1).map((l, i) => (
-            <span key={l} className={i > levelIdx ? "opacity-50" : ""}>
-              {LEVEL_LABEL[l]}
-            </span>
-          ))}
-        </div>
-        <div className="h-4 overflow-hidden rounded-full border-[3px] border-ink bg-cream">
-          <div className={`h-full transition-all duration-500 ${LEVEL_BG[card.level]}`} style={{ width: `${Math.max(4, progress * 100)}%` }} />
-        </div>
-      </div>
+      <div className="relative mx-2 mt-2 min-h-[400px] flex-1">
+        <div className="absolute inset-0 translate-x-2.5 translate-y-1.5 rotate-[5deg] rounded-[28px] border-[3px] border-ink bg-pop shadow-[5px_5px_0_#141414]" />
+        <div className="absolute inset-0 -rotate-3 rounded-[28px] border-[3px] border-ink bg-candy shadow-[5px_5px_0_#141414]" />
 
-      <div className="flex items-center gap-2.5">
-        <span className={`rounded-full border-[3px] border-ink px-3.5 py-2 text-base font-extrabold ${PLAYER_BG[turn]}`}>Au tour de {moi}</span>
-        {together ? (
-          <span className="rounded-full border-[2.5px] border-ink bg-pop px-2.5 py-1 text-xs font-extrabold">À DEUX</span>
-        ) : (
-          <span className="text-sm font-medium">{toi} regarde.</span>
-        )}
-        {passes[turn] > 0 && (
-          <span className="ml-auto rounded-full border-[2.5px] border-ink bg-pop px-2.5 py-1 text-xs font-extrabold">JOKER ×{passes[turn]}</span>
-        )}
-      </div>
-
-      <div className="relative min-h-[380px] flex-1">
-        <div className="absolute inset-x-[22px] bottom-0 right-1.5 top-3.5 rotate-[5deg] rounded-[26px] border-[3px] border-ink bg-pop" />
-        <div className="absolute inset-x-3 bottom-1 top-2 -rotate-3 rounded-[26px] border-[3px] border-ink bg-candy" />
-
-        <div className="flip absolute inset-0 bottom-3 left-1 right-2.5">
+        <div className="flip absolute inset-0">
           <div className={`flip-inner ${flipped ? "is-flipped" : ""}`}>
             <button
               type="button"
               onClick={reveal}
               aria-label="Piocher la carte"
-              className="flip-face flex flex-col items-center justify-center gap-3.5 rounded-[26px] border-[3px] border-ink bg-ink shadow-[6px_6px_0_#FF2E4D]"
+              className="flip-face flex flex-col items-center justify-center gap-3.5 rounded-[28px] border-[3px] border-ink bg-ink shadow-[6px_6px_0_#FF2E4D]"
             >
               <Mascot size={130} shadow={false} />
               <span className="text-[30px] font-black tracking-[-1px] text-cream">wink</span>
               <span className="text-sm font-semibold text-cream/80">Touche pour piocher</span>
             </button>
 
-            <div
-              className={`flip-face flip-back flex flex-col justify-between rounded-[26px] border-[3px] border-ink p-6 shadow-[6px_6px_0_#141414] ${card.kind === "joker" ? "bg-pop" : LEVEL_BG[card.level]}`}
-            >
+            <div className={`flip-face flip-back flex flex-col rounded-[28px] border-[3px] border-ink p-5 shadow-[6px_6px_0_#141414] ${card.kind === "joker" ? "bg-pop" : "bg-white"}`}>
               <div className="flex items-center justify-between gap-2">
-                <span className="rounded-full border-[2.5px] border-ink bg-cream px-3 py-1.5 text-[13px] font-extrabold tracking-wide">
+                <span className={`rounded-full border-[2.5px] border-ink px-3 py-1 text-[12px] font-extrabold uppercase tracking-wide ${card.kind === "joker" ? "bg-cream" : LEVEL_BG[card.level]}`}>
                   {KIND_LABEL[card.kind]} · {LEVEL_LABEL[card.level]}
                 </span>
-                <button
-                  type="button"
-                  aria-label={isFav ? "Retirer des favoris" : "Ajouter aux favoris"}
-                  aria-pressed={isFav}
-                  onClick={() => {
-                    sfx.click();
-                    toggleFavorite(card.id);
-                  }}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border-[2.5px] border-ink bg-cream"
-                >
-                  <Icon name={isFav ? "heartFill" : "heart"} size={20} className={isFav ? "text-passion" : ""} />
-                </button>
-              </div>
-
-              <p className="text-[30px] font-extrabold leading-[1.08] tracking-[-1px]">{fill(card.text, moi, toi, g)}</p>
-
-              {card.seconds ? (
-                prep !== null ? (
-                  <div className="flex items-center justify-between gap-3" aria-live="polite">
-                    <span className="flex items-baseline gap-2">
-                      <span className="text-sm font-extrabold">PRÊTS ?</span>
-                      <span key={prep} className="pop-in font-mono text-[44px] font-bold leading-none">
-                        {prep}
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={startTimer}
-                      className="brutal-sm press rounded-full bg-ink px-3.5 py-2 text-sm font-extrabold text-pop"
-                    >
-                      GO MAINTENANT
-                    </button>
-                  </div>
-                ) : (
+                <span className="flex items-center gap-2">
+                  <span className="font-mono text-[11px] font-bold">
+                    NIV. {levelIdx + 1}/{maxIdx + 1}
+                  </span>
                   <button
                     type="button"
-                    onClick={startTimer}
-                    disabled={timeLeft !== null && timeLeft > 0}
-                    aria-live="polite"
-                    className={`flex items-center gap-2 self-start rounded-full border-[2.5px] border-ink px-3.5 py-2 font-mono text-base font-bold ${timeLeft !== null && timeLeft > 0 && timeLeft <= 5 ? "bg-passion text-ink" : "bg-ink text-pop"}`}
+                    aria-label={isFav ? "Retirer des favoris" : "Ajouter aux favoris"}
+                    aria-pressed={isFav}
+                    onClick={() => {
+                      sfx.click();
+                      toggleFavorite(card.id);
+                    }}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border-[2.5px] border-ink bg-cream"
                   >
-                    <Icon name="timer" size={16} stroke={2.8} />
-                    {timeLeft === null ? `${formatTime(card.seconds)} · LANCER` : timeLeft === 0 ? "TERMINÉ ! · RELANCER" : formatTime(timeLeft)}
+                    <Icon name={isFav ? "heartFill" : "heart"} size={18} className={isFav ? "text-passion" : ""} />
                   </button>
-                )
-              ) : (
-                <span />
-              )}
+                </span>
+              </div>
+
+              <p className="mt-6 text-[29px] font-black leading-[1.1] tracking-[-1px]">{fill(card.text, moi, toi, g)}</p>
+
+              {card.seconds ? (
+                <div className="mt-auto pt-4">
+                  <TimerRing prep={prep} timeLeft={timeLeft} seconds={card.seconds} onGo={startTimer} />
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
       </div>
 
       {flipped && card.kind === "joker" && (
-        <button type="button" onClick={applyJoker} className="brutal press pop-in h-[58px] rounded-[18px] bg-pop text-[17px] font-extrabold">
-          {card.joker === "rejouer" ? "JE REJOUE" : card.joker === "passer" ? "JE GARDE MON JOKER" : "OK, ON LE JOUE À DEUX"}
-        </button>
+        <ActionBar
+          primary={{
+            label: card.joker === "rejouer" ? "Je rejoue" : card.joker === "passer" ? "Je garde mon joker" : "On le joue à deux",
+            onClick: applyJoker,
+            className: "bg-ink text-pop",
+          }}
+        />
       )}
 
-      {flipped && card.kind !== "joker" && (
-        <div className="pop-in grid grid-cols-2 gap-3">
-          <button type="button" onClick={refuse} className="h-[58px] rounded-[18px] border-[3px] border-ink bg-cream text-base font-bold">
-            Refuser · gage
-          </button>
-          <button type="button" onClick={done} className="brutal press h-[58px] rounded-[18px] bg-pop text-[17px] font-extrabold">
-            FAIT ! SUIVANT
-          </button>
-        </div>
-      )}
+      {flipped && card.kind !== "joker" && <ActionBar secondary={{ label: "Passer · gage", onClick: refuse }} primary={{ label: "C'est fait", onClick: done, icon: true }} />}
 
-      {!flipped && (
-        <button type="button" onClick={reveal} className="brutal press h-[58px] rounded-[18px] bg-passion text-[17px] font-extrabold">
-          PIOCHER
-        </button>
-      )}
+      {!flipped && <ActionBar primary={{ label: "Piocher", onClick: reveal, className: "bg-ink text-pop" }} />}
 
       {(gage || askPass) && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 p-4" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
@@ -319,7 +284,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
                 <h2 id="sheet-title" className="text-[28px] font-black leading-none tracking-tight">
                   Tu as un <span className="highlight">joker</span> en poche.
                 </h2>
-                <p className="text-base font-medium">Tu l'utilises pour refuser sans gage ?</p>
+                <p className="text-base font-medium">Tu l&apos;utilises pour refuser sans gage ?</p>
                 <button type="button" onClick={usePass} className="brutal press h-14 rounded-2xl bg-pop text-base font-extrabold">
                   UTILISER MON JOKER
                 </button>
@@ -348,7 +313,7 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
                     setTogether(false);
                     next();
                   }}
-                  className="brutal press h-14 rounded-2xl bg-passion text-base font-extrabold"
+                  className="brutal press h-14 rounded-2xl bg-passion text-base font-extrabold text-cream"
                 >
                   GAGE FAIT
                 </button>
@@ -357,6 +322,44 @@ export function CardsGame({ settings, onExit }: { settings: Settings; onExit: ()
           </div>
         </div>
       )}
-    </Screen>
+    </>,
+    `${index + 1}/${deck.length}`,
+  );
+}
+
+/** Minuteur circulaire (version locale, sans le hook partagé) */
+function TimerRing({ prep, timeLeft, seconds, onGo }: { prep: number | null; timeLeft: number | null; seconds: number; onGo: () => void }) {
+  const running = timeLeft !== null && timeLeft > 0;
+  const pct = prep !== null || timeLeft === null ? 100 : (timeLeft / seconds) * 100;
+  return (
+    <div className="flex items-center gap-3" aria-live="polite">
+      <button
+        type="button"
+        onClick={onGo}
+        disabled={running}
+        aria-label={prep !== null ? "Lancer le chrono maintenant" : "Lancer le chrono"}
+        className="flex h-[66px] w-[66px] shrink-0 items-center justify-center rounded-full border-4 border-ink"
+        style={{ background: `conic-gradient(${prep !== null ? "#FFD93D" : "#FF2E4D"} 0 ${pct}%, #E6DACB 0)` }}
+      >
+        <span className={`flex h-[46px] w-[46px] items-center justify-center rounded-full bg-white font-mono font-bold ${prep !== null ? "text-[22px]" : "text-[13px]"}`}>
+          {prep !== null ? <span key={prep} className="pop-in">{prep}</span> : formatTime(timeLeft ?? seconds)}
+        </span>
+      </button>
+      <span className="text-[13px] font-bold leading-tight">
+        {prep !== null ? (
+          <>
+            Prêts ? Le chrono part tout seul.
+            <br />
+            <span className="underline">Touche pour démarrer</span>
+          </>
+        ) : timeLeft === null ? (
+          "Touche le chrono quand tu es prêt·e."
+        ) : timeLeft === 0 ? (
+          "Terminé ! Touche pour relancer."
+        ) : (
+          "C'est parti !"
+        )}
+      </span>
+    </div>
   );
 }

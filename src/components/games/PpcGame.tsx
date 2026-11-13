@@ -6,7 +6,7 @@ import type { Hand, PpcAction, PpcState } from "@/lib/games/modules";
 import type { Session } from "@/lib/online/session";
 import { sfx } from "@/lib/sound";
 import { vibrate } from "@/lib/deck";
-import { GameFrame, PLAYER_BG, ScoreBar, WaitingFor } from "@/components/game/common";
+import { ActionBar, GameFrame, ScoreBar, WaitingFor } from "@/components/game/common";
 
 const HANDS: { id: Hand; label: string }[] = [
   { id: "pierre", label: "Pierre" },
@@ -89,85 +89,118 @@ export function PpcGame({ session, soundOn, onExit }: { session: Session<PpcStat
   const revealed = countdown === 0 && s.last;
   const matchLoser = s.phase === "over" && s.last && s.last.winner !== null ? ((1 - s.last.winner) as 0 | 1) : null;
 
+  const hiddenCard = (label: string, sub: string) => (
+    <div className="flex h-[150px] flex-1 flex-col items-center justify-center rounded-[26px] border-[3px] border-dashed border-ink bg-cream/60">
+      <span className="text-[56px] font-black leading-none opacity-30">{label}</span>
+      <span className="mt-1 text-xs font-black uppercase">{sub}</span>
+    </div>
+  );
+
   return (
-    <GameFrame title="Pierre-Papier-Ciseaux" soundOn={soundOn} onExit={onExit} mode={session.mode} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
-      <ScoreBar names={names} score={s.score} />
-      <span className="text-center font-mono text-[13px] font-bold">
-        MANCHE {s.round} · PREMIER À {s.target}
-      </span>
+    <GameFrame
+      title="Pierre-Papier-Ciseaux"
+      game="ppc"
+      counter={`Manche ${s.round}`}
+      className="bg-candy"
+      soundOn={soundOn}
+      onExit={onExit}
+      mode={session.mode}
+      partnerOnline={session.partnerOnline}
+      partnerName={names[partnerIdx]}
+    >
+      <div className="flex items-center justify-center gap-3">
+        <ScoreBar names={names} score={s.score} />
+      </div>
+      <span className="-mt-1 text-center font-mono text-[12px] font-bold">PREMIER À {s.target}</span>
 
       {s.phase === "pick" && needHandoff && (
         <div className="pop-in flex flex-1 flex-col items-center justify-center gap-5 text-center">
           <h1 className="text-[38px] font-black leading-[0.95] tracking-[-2px]">
-            Passe le téléphone à <span className={`px-1.5 ${PLAYER_BG[1]}`}>{names[1]}</span>
+            Passe le téléphone à <span className="bg-pop px-1.5">{names[1]}</span>
           </h1>
-          <p className="text-base font-medium">Pas de triche, {names[0]} : regarde ailleurs.</p>
-          <button
-            type="button"
-            onClick={() => {
-              sfx.click();
-              setHandoffDone(true);
+          <p className="text-base font-bold">Pas de triche, {names[0]} : regarde ailleurs.</p>
+          <ActionBar
+            primary={{
+              label: `C'est moi, ${names[1]}`,
+              className: "bg-ink text-pop",
+              onClick: () => {
+                sfx.click();
+                setHandoffDone(true);
+              },
             }}
-            className="brutal press h-[60px] w-full rounded-[18px] bg-pop text-lg font-extrabold"
-          >
-            C'EST MOI, {names[1].toUpperCase()}
-          </button>
+          />
         </div>
       )}
 
       {s.phase === "pick" && !needHandoff && chooser !== null && (
-        <div className="flex flex-1 flex-col justify-center gap-4">
-          <h1 className="text-center text-[34px] font-black leading-[0.95] tracking-[-1.5px]">
-            {names[chooser]}, <span className="highlight">choisis</span> en secret
-          </h1>
-          <div className="grid grid-cols-3 gap-3">
-            {HANDS.map((h) => (
+        <div className="flex flex-1 flex-col gap-4">
+          <div className="flex items-center gap-2.5">
+            {hiddenCard("?", names[0])}
+            <span className="text-[26px] font-black">VS</span>
+            {hiddenCard("?", names[1])}
+          </div>
+          <h1 className="text-center text-[24px] font-black leading-tight">Choisis en secret, {names[chooser]}</h1>
+          <div className="mt-auto grid grid-cols-3 gap-2.5">
+            {HANDS.map((h, i) => (
               <button
                 key={h.id}
                 type="button"
                 onClick={() => pick(h.id)}
-                className={`brutal press flex flex-col items-center gap-2 rounded-[22px] py-5 text-base font-extrabold ${PLAYER_BG[chooser]}`}
+                className={`brutal press flex flex-col items-center gap-1.5 rounded-[24px] py-4 text-[12px] font-black uppercase ${["bg-white", "bg-pop", "bg-cream"][i]}`}
               >
-                <HandIcon hand={h.id} />
+                <HandIcon hand={h.id} size={52} />
                 {h.label}
               </button>
             ))}
           </div>
           {!local && s.picks[partnerIdx] && <p className="text-center text-sm font-bold">{names[partnerIdx]} a déjà choisi.</p>}
+          <p className="text-center text-xs font-bold opacity-70">{local ? "L'autre regarde ailleurs pendant ton choix." : "Chacun choisit sur son écran, révélation simultanée."}</p>
         </div>
       )}
 
-      {s.phase === "pick" && !local && chooser === null && <WaitingFor name={names[partnerIdx]} what="choisit en secret…" />}
+      {s.phase === "pick" && !local && chooser === null && (
+        <>
+          <div className="flex items-center gap-2.5">
+            {hiddenCard("✓", "Toi")}
+            <span className="text-[26px] font-black">VS</span>
+            {hiddenCard("?", `${names[partnerIdx]} choisit…`)}
+          </div>
+          <WaitingFor name={names[partnerIdx]} what="choisit en secret…" />
+        </>
+      )}
 
       {s.phase !== "pick" && s.last && (
-        <div className="flex flex-1 flex-col justify-center gap-4">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-1 flex-col gap-4">
+          <div className="flex items-center gap-2.5">
             {([0, 1] as const).map((p) => (
-              <div key={p} className={`brutal flex h-44 flex-col items-center justify-center gap-2 rounded-[24px] ${PLAYER_BG[p]}`}>
-                {revealed ? (
-                  <span className="pop-in flex flex-col items-center gap-1">
-                    <HandIcon hand={s.last!.picks[p]} size={72} />
-                    <span className="text-base font-extrabold capitalize">{s.last!.picks[p]}</span>
-                  </span>
-                ) : (
-                  <span key={countdown} className="pop-in font-mono text-[64px] font-bold">
-                    {countdown}
-                  </span>
-                )}
-                <span className="text-sm font-bold">{names[p]}</span>
+              <div key={p} className={`contents`}>
+                {p === 1 && <span className="text-[26px] font-black">VS</span>}
+                <div className={`brutal flex h-[170px] flex-1 flex-col items-center justify-center gap-1 rounded-[26px] ${p === 0 ? "bg-white" : "bg-pop"}`}>
+                  {revealed ? (
+                    <span className="pop-in flex flex-col items-center gap-1">
+                      <HandIcon hand={s.last!.picks[p]} size={74} />
+                      <span className="text-sm font-black uppercase">{s.last!.picks[p]}</span>
+                    </span>
+                  ) : (
+                    <span key={countdown} className="pop-in font-mono text-[64px] font-bold">
+                      {countdown}
+                    </span>
+                  )}
+                  <span className="text-xs font-black uppercase">{names[p]}</span>
+                </div>
               </div>
             ))}
           </div>
 
           {revealed && (
-            <div className="pop-in brutal flex flex-col gap-2 rounded-[22px] bg-cream p-5 text-center">
+            <div className="pop-in brutal flex flex-col gap-2 rounded-[22px] bg-white p-5 text-center">
               <span className="text-[26px] font-black leading-tight">
                 {s.last.winner === null ? "Égalité !" : `${names[s.last.winner]} gagne la manche`}
               </span>
               {matchLoser !== null && (
                 <>
                   <span className="font-mono text-xs font-bold">FIN DU MATCH · GAGE POUR {names[matchLoser].toUpperCase()}</span>
-                  <p className="text-[22px] font-extrabold leading-tight">
+                  <p className="text-[21px] font-extrabold leading-tight">
                     {fill(gagesFor(s.distance)[s.gageIdx], names[matchLoser], names[1 - matchLoser], { addressee: genders[matchLoser], other: genders[1 - matchLoser] })}
                   </p>
                 </>
@@ -176,16 +209,16 @@ export function PpcGame({ session, soundOn, onExit }: { session: Session<PpcStat
           )}
 
           {revealed && (
-            <button
-              type="button"
-              onClick={() => {
-                sfx.swoosh();
-                act(s.phase === "over" ? { t: "rematch" } : { t: "continue" }, me ?? 0);
+            <ActionBar
+              primary={{
+                label: s.phase === "over" ? "Revanche" : "Manche suivante",
+                className: "bg-ink text-pop",
+                onClick: () => {
+                  sfx.swoosh();
+                  act(s.phase === "over" ? { t: "rematch" } : { t: "continue" }, me ?? 0);
+                },
               }}
-              className="brutal press h-[58px] rounded-[18px] bg-passion text-[17px] font-extrabold"
-            >
-              {s.phase === "over" ? "REVANCHE" : "MANCHE SUIVANTE"}
-            </button>
+            />
           )}
         </div>
       )}

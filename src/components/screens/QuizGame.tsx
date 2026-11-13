@@ -7,11 +7,10 @@ import { quizFor } from "@/data/quiz";
 import { db, type Settings } from "@/lib/db";
 import { vibrate } from "@/lib/deck";
 import { sfx } from "@/lib/sound";
-import { Icon, Screen, SoundToggle, TopBar } from "@/components/ui";
 import { Mascot, POSES } from "@/components/Mascot";
+import { ActionBar, GameEnd, GameFrame, TurnBanner } from "@/components/game/common";
 
 const LEVEL_BADGE = LEVEL_BG;
-const PLAYER_BG = ["bg-candy", "bg-flame"];
 
 type Mode = "random" | "manual";
 
@@ -25,6 +24,10 @@ export function QuizGame({ settings, onExit }: { settings: Settings; onExit: () 
   const [current, setCurrent] = useState<number | null>(null);
   const [rolling, setRolling] = useState<number | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [answeredN, setAnsweredN] = useState(0);
+  const [skippedN, setSkippedN] = useState(0);
+  const [highlight, setHighlight] = useState<string | undefined>();
+  const [ended, setEnded] = useState(false);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
@@ -76,117 +79,105 @@ export function QuizGame({ settings, onExit }: { settings: Settings; onExit: () 
     if (current === null) return;
     sfx.success();
     vibrate(15);
+    setAnsweredN((n) => n + 1);
+    setHighlight(fill(questions[current].text, asker, answerer, g));
     await db.quizPlayed.put({ questionId: questions[current].id, playedAt: Date.now() });
     setCurrent(null);
     setTurn((t) => 1 - t);
   }
 
   function skip() {
+    setSkippedN((n) => n + 1);
     sfx.sparkle();
     setCurrent(null);
   }
 
-  async function reset() {
-    if (!window.confirm("Recommencer la grille ? Tous les numéros redeviennent disponibles.")) return;
+  async function reset(ask = true) {
+    if (ask && !window.confirm("Recommencer la grille ? Tous les numéros redeviennent disponibles.")) return;
     sfx.swoosh();
     await db.quizPlayed.clear();
     setTurn(0);
   }
 
-  // ——— Écran question ———
-  if (current !== null) {
-    const q = questions[current];
-    return (
-      <Screen className="bg-pop">
-        <TopBar
-          onBack={() => {
-            sfx.click();
-            setCurrent(null);
-          }}
-          right={
-            <span className={`rounded-full border-[2.5px] border-ink px-3 py-1.5 text-[13px] font-extrabold tracking-wide ${LEVEL_BADGE[q.level]}`}>
-              {LEVEL_LABEL[q.level]}
-            </span>
-          }
-        />
+  function exit() {
+    if (answeredN + skippedN >= 3 && !ended) {
+      setEnded(true);
+      return;
+    }
+    onExit();
+  }
+  const frame = (children: React.ReactNode) => (
+    <GameFrame title="Quiz" game="quiz" counter={`${playedCount}/${questions.length}`} soundOn={settings.soundOn} onExit={exit} mode="local" partnerOnline partnerName={answerer} className="bg-pop">
+      {children}
+    </GameFrame>
+  );
+  const allDone = free.length === 0 && !!playedRows;
 
-        <div className="flex items-end gap-3.5">
-          <span className="pop-in flex h-[150px] w-[150px] shrink-0 items-center justify-center rounded-[28px] border-[3px] border-ink bg-ink font-mono text-[72px] font-bold tracking-[-4px] text-pop shadow-[6px_6px_0_#FF2E4D]">
-            {current + 1}
-          </span>
-          <span className="flex flex-col gap-0.5 pb-1.5">
-            <span className="font-mono text-[13px] font-bold">QUESTION</span>
-            <span className="text-lg font-bold">{asker} demande,</span>
-            <span className="text-lg font-bold">{answerer} répond.</span>
-          </span>
-        </div>
-
-        <div className="brutal flex flex-1 flex-col justify-between gap-6 rounded-[26px] bg-cream p-6 shadow-[6px_6px_0_#141414]">
-          <p className="text-[30px] font-extrabold leading-[1.1] tracking-[-1px]">{fill(q.text, asker, answerer, g)}</p>
-          <span className="flex items-center gap-2 text-sm font-semibold">
-            <Icon name="heart" size={18} /> Une réponse sincère vaut un bisou.
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <button type="button" onClick={skip} className="h-[58px] rounded-[18px] border-[3px] border-ink bg-cream text-base font-bold">
-            Joker · passer
-          </button>
-          <button type="button" onClick={answered} className="brutal press h-[58px] rounded-[18px] bg-passion text-[17px] font-extrabold">
-            RÉPONDU !
-          </button>
-        </div>
-      </Screen>
+  // ——— Fin ———
+  if (ended || (allDone && current === null)) {
+    return frame(
+      <GameEnd
+        label={allDone ? "PLUS AUCUN SECRET" : "SOIRÉE TERMINÉE"}
+        title={
+          <>
+            Belle partie,
+            <br />
+            {names[0]} &amp; {names[1]}.
+          </>
+        }
+        stats={[
+          { value: answeredN, label: "questions répondues" },
+          { value: skippedN, label: "jokers utilisés" },
+          { value: `${playedCount}/${questions.length}`, label: "de la grille" },
+        ]}
+        highlight={highlight}
+        replayLabel={allDone ? "Nouvelle grille" : "Reprendre la partie"}
+        onReplay={() => {
+          if (allDone) void reset(false);
+          setEnded(false);
+        }}
+        onExit={onExit}
+      />,
     );
   }
 
-  // ——— Grille terminée ———
-  if (free.length === 0 && playedRows) {
-    return (
-      <Screen>
-        <TopBar onBack={onExit} title="Quiz" />
-        <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
-          <Mascot size={170} pose={POSES.v} interactive className="float" />
-          <h1 className="text-[40px] font-black leading-[0.95] tracking-[-2px]">
-            Plus aucun <span className="highlight">secret</span> !
-          </h1>
-          <p className="text-base font-medium">Vous avez répondu aux {questions.length} questions.</p>
+  // ——— Écran question ———
+  if (current !== null) {
+    const q = questions[current];
+    return frame(
+      <>
+        <TurnBanner name={asker} label={`${asker} demande, ${answerer} répond`} />
+        <div className="mt-2 flex items-end gap-3.5">
+          <span className="pop-in flex h-[120px] w-[120px] shrink-0 items-center justify-center rounded-[26px] border-[3px] border-ink bg-ink font-mono text-[60px] font-bold tracking-[-3px] text-pop shadow-[6px_6px_0_#FF2E4D]">
+            {current + 1}
+          </span>
+          <span className={`mb-1 rounded-full border-[2.5px] border-ink px-3 py-1 text-[12px] font-extrabold tracking-wide ${LEVEL_BADGE[q.level]}`}>
+            VÉRITÉ · {LEVEL_LABEL[q.level]}
+          </span>
         </div>
-        <button type="button" onClick={reset} className="brutal press h-[60px] rounded-[18px] bg-passion text-lg font-extrabold">
-          NOUVELLE PARTIE
-        </button>
-      </Screen>
+        <div className="brutal relative flex flex-1 flex-col rounded-[24px] bg-white p-5 pb-24">
+          <p className="max-w-[94%] text-[28px] font-black leading-[1.12] tracking-[-1px]">{fill(q.text, asker, answerer, g)}</p>
+          <p className="mt-auto max-w-[60%] pt-4 text-sm font-bold">Une réponse sincère vaut un bisou.</p>
+          <div className="pointer-events-none absolute -bottom-3 -right-2">
+            <Mascot size={118} pose={POSES.v} />
+          </div>
+        </div>
+        <ActionBar
+          secondary={{ label: "Joker · passer", onClick: skip }}
+          primary={{ label: "J'ai répondu", onClick: answered, className: "bg-ink text-pop" }}
+        />
+      </>,
     );
   }
 
   // ——— Grille ———
-  const seg = (on: boolean) => `h-11 rounded-[11px] text-base font-bold transition ${on ? "bg-ink text-cream" : "text-ink"}`;
+  const seg = (on: boolean) => `h-10 rounded-[11px] text-[15px] font-bold transition ${on ? "bg-ink text-cream" : "text-ink"}`;
 
-  return (
-    <Screen>
-      <TopBar
-        onBack={onExit}
-        title="Quiz"
-        right={
-          <span className="flex items-center gap-2.5">
-            <span className="font-mono text-[13px] font-bold">
-              {playedCount}/{questions.length}
-            </span>
-            <SoundToggle on={settings.soundOn} />
-          </span>
-        }
-      />
+  return frame(
+    <>
+      <TurnBanner name={asker} label={`Au tour de ${asker} · choisis un numéro`} />
 
-      <div className="flex flex-col gap-1">
-        <h1 className="text-[40px] font-black leading-[0.95] tracking-[-2px]">
-          Choisis ton <span className="highlight">numéro.</span>
-        </h1>
-        <p className="text-[15px] font-medium">
-          <span className={`rounded-full border-2 border-ink px-2 py-0.5 font-bold ${PLAYER_BG[turn]}`}>{asker}</span> pose la question à {answerer}.
-        </p>
-      </div>
-
-      <div role="group" aria-label="Mode de tirage" className="grid grid-cols-2 rounded-2xl border-[3px] border-ink bg-cream p-1">
+      <div role="group" aria-label="Mode de tirage" className="grid grid-cols-2 rounded-2xl border-[3px] border-ink bg-white p-1">
         <button
           type="button"
           aria-pressed={mode === "random"}
@@ -218,11 +209,7 @@ export function QuizGame({ settings, onExit }: { settings: Settings; onExit: () 
           const label = `Question ${i + 1}${isPlayed ? ", déjà jouée" : q.level === "brulant" ? ", niveau Brûlant" : ""}`;
           if (isPlayed) {
             return (
-              <span
-                key={q.id}
-                aria-label={label}
-                className="flex h-[52px] items-center justify-center rounded-[14px] border-[3px] border-ink bg-muted font-mono text-[17px] font-bold text-[#6B6058] line-through"
-              >
+              <span key={q.id} aria-label={label} className="flex aspect-square items-center justify-center rounded-[14px] border-[3px] border-ink bg-ink text-[18px] font-black text-pop opacity-35">
                 {i + 1}
               </span>
             );
@@ -235,8 +222,8 @@ export function QuizGame({ settings, onExit }: { settings: Settings; onExit: () 
               aria-label={label}
               disabled={mode !== "manual" || rolling !== null}
               onClick={() => open(i)}
-              className={`flex h-[52px] items-center justify-center rounded-[14px] border-[3px] border-ink font-mono text-[17px] font-bold transition-transform duration-75 ${
-                isRolling ? "scale-110 bg-passion shadow-[3px_3px_0_#141414]" : q.level === "brulant" ? "bg-flame shadow-[3px_3px_0_#141414]" : "bg-pop shadow-[3px_3px_0_#141414]"
+              className={`flex aspect-square items-center justify-center rounded-[14px] border-[3px] border-ink text-[18px] font-black shadow-[3px_3px_0_#141414] transition-transform duration-75 ${
+                isRolling ? "scale-110 bg-passion text-cream" : q.level === "brulant" ? "bg-flame" : "bg-white"
               } ${mode === "manual" ? "press" : ""}`}
             >
               {i + 1}
@@ -245,25 +232,18 @@ export function QuizGame({ settings, onExit }: { settings: Settings; onExit: () 
         })}
       </div>
 
-      <div className="sticky bottom-0 mt-auto flex flex-col gap-2.5 bg-cream pb-1 pt-2">
+      <div className="sticky bottom-0 mt-auto flex flex-col gap-2 bg-pop pb-1 pt-2">
         {mode === "random" ? (
-          <button
-            type="button"
-            onClick={roll}
-            disabled={rolling !== null}
-            className="brutal press flex h-[60px] items-center justify-center gap-2.5 rounded-[18px] bg-passion text-lg font-extrabold tracking-wide"
-          >
-            {rolling !== null ? "ÇA TOURNE…" : "TIRER UN NUMÉRO"}
-          </button>
+          <ActionBar primary={{ label: rolling !== null ? "Ça tourne…" : "Tirer un numéro", onClick: roll, className: "bg-passion text-cream" }} />
         ) : (
-          <p className="text-center text-sm font-semibold">Touche un numéro pour découvrir la question.</p>
+          <p className="text-center text-sm font-bold">Touche un numéro pour découvrir la question.</p>
         )}
         {playedCount > 0 && (
-          <button type="button" onClick={reset} className="text-sm font-semibold underline">
+          <button type="button" onClick={() => void reset()} className="text-sm font-semibold underline">
             Recommencer la grille
           </button>
         )}
       </div>
-    </Screen>
+    </>,
   );
 }

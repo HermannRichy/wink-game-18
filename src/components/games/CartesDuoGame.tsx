@@ -8,8 +8,8 @@ import { markSeen } from "@/lib/seen";
 import { sfx } from "@/lib/sound";
 import { vibrate } from "@/lib/deck";
 import { useChallengeTimer } from "@/lib/useChallengeTimer";
-import { Mascot, POSES } from "@/components/Mascot";
-import { GameFrame, PLAYER_BG, TimerBlock, WaitingFor } from "@/components/game/common";
+import { Mascot } from "@/components/Mascot";
+import { ActionBar, GameEnd, GameFrame, TimerBlock, TurnBanner, WaitingFor } from "@/components/game/common";
 
 const KIND = { question: "QUESTION", defi: "DÉFI", joker: "JOKER" } as const;
 
@@ -38,16 +38,15 @@ export function CartesDuoGame({ session, soundOn, onExit }: { session: Session<C
   }, [s.phase, s.index]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <GameFrame title="Cartes" soundOn={soundOn} onExit={onExit} mode={session.mode} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
-      <div className="flex items-center gap-2.5">
-        <span className={`rounded-full border-[3px] border-ink px-3.5 py-2 text-base font-extrabold ${PLAYER_BG[s.turn]}`}>
-          {me === s.turn ? "À toi de piocher" : `Au tour de ${moi}`}
-        </span>
-        {s.together && <span className="rounded-full border-[2.5px] border-ink bg-pop px-2.5 py-1 text-xs font-extrabold">À DEUX</span>}
-        <span className="ml-auto font-mono text-[13px] font-bold">
-          {Math.min(s.index + 1, s.deck.length)}/{s.deck.length}
-        </span>
-      </div>
+    <GameFrame title="Cartes" game="cartes" counter={`${Math.min(s.index + 1, s.deck.length)}/${s.deck.length}`} soundOn={soundOn} onExit={onExit} mode={session.mode} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
+      {s.phase !== "done" && (
+        <TurnBanner
+          name={moi}
+          mine={me === s.turn}
+          label={me === s.turn ? "À toi de piocher" : undefined}
+          right={s.together ? "À DEUX" : s.passes[s.turn] > 0 ? `JOKER ×${s.passes[s.turn]}` : undefined}
+        />
+      )}
 
       {s.phase === "draw" && (
         <div className="flex flex-1 flex-col justify-center gap-5">
@@ -55,7 +54,7 @@ export function CartesDuoGame({ session, soundOn, onExit }: { session: Session<C
             type="button"
             disabled={!mine}
             onClick={() => T({ t: "draw" })}
-            className="brutal flex h-[360px] flex-col items-center justify-center gap-3.5 rounded-[26px] bg-ink shadow-[6px_6px_0_#FF2E4D]"
+            className="brutal flex h-[380px] flex-col items-center justify-center gap-3.5 rounded-[28px] bg-ink shadow-[6px_6px_0_#FF2E4D]"
             aria-label="Piocher la carte"
           >
             <Mascot size={130} shadow={false} />
@@ -68,44 +67,49 @@ export function CartesDuoGame({ session, soundOn, onExit }: { session: Session<C
 
       {s.phase === "show" && card && (
         <>
-          <div className={`pop-in brutal flex flex-1 flex-col justify-between gap-6 rounded-[26px] p-6 shadow-[6px_6px_0_#141414] ${card.kind === "joker" ? "bg-pop" : LEVEL_BG[card.level]}`}>
-            <span className="self-start rounded-full border-[2.5px] border-ink bg-cream px-3 py-1.5 text-[13px] font-extrabold tracking-wide">
-              {KIND[card.kind]} · {LEVEL_LABEL[card.level]}
-            </span>
-            <p className="text-[30px] font-extrabold leading-[1.08] tracking-[-1px]">{fill(card.text, moi, toi, g)}</p>
-            <TimerBlock timer={timer} seconds={card.seconds} />
+          <div className="relative mx-2 mt-1 min-h-[360px] flex-1">
+            <div className="absolute inset-0 translate-x-2.5 translate-y-1.5 rotate-[5deg] rounded-[28px] border-[3px] border-ink bg-pop" />
+            <div className="absolute inset-0 -rotate-3 rounded-[28px] border-[3px] border-ink bg-candy" />
+            <div className={`pop-in brutal absolute inset-0 flex flex-col gap-6 rounded-[28px] p-5 shadow-[6px_6px_0_#141414] ${card.kind === "joker" ? "bg-pop" : "bg-white"}`}>
+              <span className={`self-start rounded-full border-[2.5px] border-ink px-3 py-1 text-[12px] font-extrabold tracking-wide ${card.kind === "joker" ? "bg-cream" : LEVEL_BG[card.level]}`}>
+                {KIND[card.kind]} · {LEVEL_LABEL[card.level]}
+              </span>
+              <p className="text-[29px] font-black leading-[1.1] tracking-[-1px]">{fill(card.text, moi, toi, g)}</p>
+              <div className="mt-auto">
+                <TimerBlock timer={timer} seconds={card.seconds} />
+              </div>
+            </div>
           </div>
           {!mine ? (
             <WaitingFor name={moi} what={card.kind === "question" ? "répond…" : "relève le défi…"} />
           ) : card.kind === "joker" ? (
-            <button type="button" onClick={() => T({ t: "joker" })} className="brutal press h-[58px] rounded-[18px] bg-pop text-[17px] font-extrabold">
-              {card.joker === "rejouer" ? "JE REJOUE" : card.joker === "passer" ? "JE GARDE MON JOKER" : "OK, ON LE JOUE À DEUX"}
-            </button>
+            <ActionBar
+              primary={{
+                label: card.joker === "rejouer" ? "Je rejoue" : card.joker === "passer" ? "Je garde mon joker" : "On le joue à deux",
+                onClick: () => T({ t: "joker" }),
+                className: "bg-ink text-pop",
+              }}
+            />
           ) : (
-            <div className="flex flex-col gap-2.5">
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
+            <div className="mt-auto flex flex-col gap-2">
+              <ActionBar
+                secondary={{
+                  label: "Passer · gage",
+                  onClick: () => {
                     timer.stop();
                     T({ t: "refuse" });
-                  }}
-                  className="h-[58px] rounded-[18px] border-[3px] border-ink bg-cream text-base font-bold"
-                >
-                  Refuser · gage
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
+                  },
+                }}
+                primary={{
+                  label: "C'est fait",
+                  icon: true,
+                  onClick: () => {
                     sfx.success();
                     timer.stop();
                     T({ t: "done" });
-                  }}
-                  className="brutal press h-[58px] rounded-[18px] bg-passion text-[17px] font-extrabold"
-                >
-                  FAIT !
-                </button>
-              </div>
+                  },
+                }}
+              />
               {s.passes[s.turn] > 0 && (
                 <button
                   type="button"
@@ -126,21 +130,21 @@ export function CartesDuoGame({ session, soundOn, onExit }: { session: Session<C
 
       {s.phase === "gage" && (
         <>
-          <div className="pop-in brutal flex flex-1 flex-col justify-center gap-3 rounded-[26px] bg-cream p-6">
-            <span className="font-mono text-xs font-bold">REFUSÉ, DONC…</span>
+          <div className="pop-in brutal flex flex-1 flex-col justify-center gap-3 rounded-[28px] bg-white p-6">
+            <span className="self-start rounded-full border-[2.5px] border-ink bg-passion px-3 py-1 text-[12px] font-extrabold text-cream">REFUSÉ, DONC… GAGE</span>
             <p className="text-[30px] font-black leading-[1.05] tracking-tight">{fill(gagesFor(s.distance)[s.gageIdx], moi, toi, g)}</p>
           </div>
           {mine ? (
-            <button
-              type="button"
-              onClick={() => {
-                sfx.click();
-                T({ t: "gageDone" });
+            <ActionBar
+              primary={{
+                label: "Gage fait",
+                icon: true,
+                onClick: () => {
+                  sfx.click();
+                  T({ t: "gageDone" });
+                },
               }}
-              className="brutal press h-[58px] rounded-[18px] bg-passion text-[17px] font-extrabold"
-            >
-              GAGE FAIT
-            </button>
+            />
           ) : (
             <WaitingFor name={moi} what="fait son gage…" />
           )}
@@ -148,22 +152,20 @@ export function CartesDuoGame({ session, soundOn, onExit }: { session: Session<C
       )}
 
       {s.phase === "done" && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
-          <Mascot size={150} pose={POSES.joyeuse} interactive className="float" />
-          <h1 className="text-[38px] font-black leading-[0.95] tracking-[-2px]">
-            Pioche <span className="highlight">vidée</span> !
-          </h1>
-          <button
-            type="button"
-            onClick={() => {
-              sfx.swoosh();
-              act({ t: "restart" }, me ?? 0);
-            }}
-            className="brutal press h-[58px] w-full rounded-[18px] bg-passion text-[17px] font-extrabold"
-          >
-            REJOUER
-          </button>
-        </div>
+        <GameEnd
+          label="PIOCHE VIDÉE"
+          title={
+            <>
+              Belle partie,
+              <br />
+              {names[0]} &amp; {names[1]}.
+            </>
+          }
+          stats={[{ value: s.deck.length, label: "cartes piochées" }]}
+          replayLabel="Rejouer aux Cartes"
+          onReplay={() => act({ t: "restart" }, me ?? 0)}
+          onExit={onExit}
+        />
       )}
     </GameFrame>
   );

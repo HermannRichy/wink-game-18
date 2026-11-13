@@ -7,8 +7,8 @@ import type { QuizDuoAction, QuizDuoState } from "@/lib/games/modules";
 import type { Session } from "@/lib/online/session";
 import { sfx } from "@/lib/sound";
 import { vibrate } from "@/lib/deck";
-import { Icon } from "@/components/ui";
-import { GameFrame, PLAYER_BG, WaitingFor } from "@/components/game/common";
+import { ActionBar, GameEnd, GameFrame, TurnBanner, WaitingFor } from "@/components/game/common";
+import { Mascot, POSES } from "@/components/Mascot";
 
 /** Le Quiz en Mode Duo ou Distance : celui qui demande tire le numéro, l'autre répond */
 export function QuizDuoGame({ session, soundOn, onExit }: { session: Session<QuizDuoState, QuizDuoAction>; soundOn: boolean; onExit: () => void }) {
@@ -63,75 +63,70 @@ export function QuizDuoGame({ session, soundOn, onExit }: { session: Session<Qui
   const q = s.current !== null ? questions[s.current] : null;
 
   return (
-    <GameFrame title="Quiz" soundOn={soundOn} onExit={onExit} mode={session.mode} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
-      <div className="flex items-center justify-between">
-        <span className={`rounded-full border-[3px] border-ink px-3.5 py-2 text-base font-extrabold ${PLAYER_BG[s.turn]}`}>
-          {me === s.turn ? "Tu poses la question" : `${asker} pose la question`}
-        </span>
-        <span className="font-mono text-[13px] font-bold">
-          {s.played.length}/{questions.length}
-        </span>
-      </div>
+    <GameFrame title="Quiz" game="quiz" counter={`${s.played.length}/${questions.length}`} className="bg-pop" soundOn={soundOn} onExit={onExit} mode={session.mode} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
+      {(q || free.length > 0) && (
+        <TurnBanner
+          name={asker}
+          label={q ? `${asker} demande, ${answerer} répond` : me === s.turn ? "À toi · choisis un numéro" : `Au tour de ${asker} · choisis un numéro`}
+        />
+      )}
 
       {q ? (
         <>
-          <div className="flex items-end gap-3.5">
-            <span className="pop-in flex h-[120px] w-[120px] shrink-0 items-center justify-center rounded-[26px] border-[3px] border-ink bg-ink font-mono text-[60px] font-bold tracking-[-3px] text-pop shadow-[6px_6px_0_#FF2E4D]">
+          <div className="mt-1 flex items-end gap-3.5">
+            <span className="pop-in flex h-[110px] w-[110px] shrink-0 items-center justify-center rounded-[26px] border-[3px] border-ink bg-ink font-mono text-[56px] font-bold tracking-[-3px] text-pop shadow-[6px_6px_0_#FF2E4D]">
               {s.current! + 1}
             </span>
-            <span className="flex flex-col gap-1 pb-1">
-              <span className={`self-start rounded-full border-[2.5px] border-ink px-2.5 py-1 text-xs font-extrabold ${LEVEL_BG[q.level]}`}>{LEVEL_LABEL[q.level]}</span>
-              <span className="text-lg font-bold">
-                {asker} demande, {answerer} répond.
-              </span>
-            </span>
+            <span className={`mb-1 rounded-full border-[2.5px] border-ink px-3 py-1 text-[12px] font-extrabold ${LEVEL_BG[q.level]}`}>VÉRITÉ · {LEVEL_LABEL[q.level]}</span>
           </div>
-          <div className="brutal flex flex-1 flex-col justify-between gap-6 rounded-[26px] bg-cream p-6 shadow-[6px_6px_0_#141414]">
-            <p className="text-[30px] font-extrabold leading-[1.1] tracking-[-1px]">{fill(q.text, asker, answerer, g)}</p>
-            <span className="flex items-center gap-2 text-sm font-semibold">
-              <Icon name="heart" size={18} /> {session.distance ? "Réponds en vocal ou en appel vidéo." : "Une réponse sincère vaut un bisou."}
-            </span>
+          <div className="brutal relative flex flex-1 flex-col rounded-[24px] bg-white p-5 pb-24">
+            <p className="max-w-[94%] text-[27px] font-black leading-[1.12] tracking-[-1px]">{fill(q.text, asker, answerer, g)}</p>
+            <p className="mt-auto max-w-[60%] pt-4 text-sm font-bold">{session.distance ? "Réponds en vocal ou en appel vidéo." : "Une réponse sincère vaut un bisou."}</p>
+            <div className="pointer-events-none absolute -bottom-3 -right-2">
+              <Mascot size={112} pose={POSES.v} />
+            </div>
           </div>
           {mine ? (
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => {
+            <ActionBar
+              secondary={{
+                label: "Joker · passer",
+                onClick: () => {
                   sfx.sparkle();
                   act({ t: "skip" }, s.turn);
-                }}
-                className="h-[58px] rounded-[18px] border-[3px] border-ink bg-cream text-base font-bold"
-              >
-                Joker · passer
-              </button>
-              <button
-                type="button"
-                onClick={() => {
+                },
+              }}
+              primary={{
+                label: "J'ai répondu",
+                className: "bg-ink text-pop",
+                onClick: () => {
                   sfx.success();
                   act({ t: "answered" }, s.turn);
-                }}
-                className="brutal press h-[58px] rounded-[18px] bg-passion text-[17px] font-extrabold"
-              >
-                RÉPONDU !
-              </button>
-            </div>
+                },
+              }}
+            />
           ) : (
-            <p className="rounded-2xl border-[3px] border-ink bg-pop p-4 text-center text-base font-extrabold">À toi de répondre, {answerer} !</p>
+            <p className="mt-auto rounded-[18px] border-[3px] border-ink bg-white p-4 text-center text-base font-extrabold">À toi de répondre, {answerer} !</p>
           )}
         </>
       ) : free.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-          <h1 className="text-[38px] font-black leading-[0.95] tracking-[-2px]">
-            Plus aucun <span className="highlight">secret</span> !
-          </h1>
-          <button type="button" onClick={() => act({ t: "reset" }, me ?? 0)} className="brutal press h-[58px] w-full rounded-[18px] bg-passion text-[17px] font-extrabold">
-            NOUVELLE PARTIE
-          </button>
-        </div>
+        <GameEnd
+          label="PLUS AUCUN SECRET"
+          title={
+            <>
+              Belle partie,
+              <br />
+              {names[0]} &amp; {names[1]}.
+            </>
+          }
+          stats={[{ value: s.played.length, label: "questions posées" }]}
+          replayLabel="Nouvelle grille"
+          onReplay={() => act({ t: "reset" }, me ?? 0)}
+          onExit={onExit}
+        />
       ) : (
         <>
           {mine && (
-            <div role="group" aria-label="Mode de tirage" className="grid grid-cols-2 rounded-2xl border-[3px] border-ink bg-cream p-1">
+            <div role="group" aria-label="Mode de tirage" className="grid grid-cols-2 rounded-2xl border-[3px] border-ink bg-white p-1">
               {(["random", "manual"] as const).map((m) => (
                 <button
                   key={m}
@@ -141,7 +136,7 @@ export function QuizDuoGame({ session, soundOn, onExit }: { session: Session<Qui
                     sfx.click();
                     setMode(m);
                   }}
-                  className={`h-11 rounded-[11px] text-base font-bold ${mode === m ? "bg-ink text-cream" : ""}`}
+                  className={`h-10 rounded-[11px] text-[15px] font-bold ${mode === m ? "bg-ink text-cream" : ""}`}
                 >
                   {m === "random" ? "Au hasard" : "Je choisis"}
                 </button>
@@ -153,7 +148,7 @@ export function QuizDuoGame({ session, soundOn, onExit }: { session: Session<Qui
               const isPlayed = played.has(qq.id);
               const label = `Question ${i + 1}${isPlayed ? ", déjà jouée" : ""}`;
               return isPlayed ? (
-                <span key={qq.id} aria-label={label} className="flex h-[52px] items-center justify-center rounded-[14px] border-[3px] border-ink bg-muted font-mono text-[17px] font-bold text-[#6B6058] line-through">
+                <span key={qq.id} aria-label={label} className="flex aspect-square items-center justify-center rounded-[14px] border-[3px] border-ink bg-ink text-[18px] font-black text-pop opacity-35">
                   {i + 1}
                 </span>
               ) : (
@@ -163,8 +158,8 @@ export function QuizDuoGame({ session, soundOn, onExit }: { session: Session<Qui
                   aria-label={label}
                   disabled={!mine || mode !== "manual" || rolling !== null}
                   onClick={() => act({ t: "open", index: i }, s.turn)}
-                  className={`flex h-[52px] items-center justify-center rounded-[14px] border-[3px] border-ink font-mono text-[17px] font-bold shadow-[3px_3px_0_#141414] ${
-                    rolling === i ? "scale-110 bg-passion" : qq.level === "brulant" ? "bg-flame" : "bg-pop"
+                  className={`flex aspect-square items-center justify-center rounded-[14px] border-[3px] border-ink text-[18px] font-black shadow-[3px_3px_0_#141414] ${
+                    rolling === i ? "scale-110 bg-passion text-cream" : qq.level === "brulant" ? "bg-flame" : "bg-white"
                   }`}
                 >
                   {i + 1}
@@ -172,12 +167,10 @@ export function QuizDuoGame({ session, soundOn, onExit }: { session: Session<Qui
               );
             })}
           </div>
-          <div className="sticky bottom-0 mt-auto bg-cream pb-1 pt-2">
+          <div className="sticky bottom-0 mt-auto bg-pop pb-1 pt-2">
             {mine ? (
               mode === "random" ? (
-                <button type="button" onClick={roll} disabled={rolling !== null} className="brutal press h-[60px] w-full rounded-[18px] bg-passion text-lg font-extrabold">
-                  {rolling !== null ? "ÇA TOURNE…" : "TIRER UN NUMÉRO"}
-                </button>
+                <ActionBar primary={{ label: rolling !== null ? "Ça tourne…" : "Tirer un numéro", onClick: roll, className: "bg-passion text-cream" }} />
               ) : (
                 <p className="text-center text-sm font-semibold">Touche un numéro pour poser la question.</p>
               )

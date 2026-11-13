@@ -2,9 +2,11 @@
 
 import type { ReactNode } from "react";
 
-type IconName = "aov" | "grid" | "hand" | "glass" | "star" | "starFill" | "users" | "copy" | "soundOn" | "soundOff" | "back" | "settings" | "cards" | "quiz" | "dice" | "tower" | "wifi" | "timer" | "heart" | "heartFill" | "share" | "lock" | "plus" | "chat" | "send" | "mic" | "phone" | "play" | "pause" | "help";
+type IconName = "aov" | "grid" | "hand" | "glass" | "star" | "starFill" | "users" | "copy" | "soundOn" | "soundOff" | "back" | "settings" | "cards" | "quiz" | "dice" | "tower" | "wifi" | "timer" | "heart" | "heartFill" | "share" | "lock" | "plus" | "chat" | "send" | "mic" | "phone" | "play" | "pause" | "help" | "close" | "check";
 
 const PATHS: Record<IconName, ReactNode> = {
+  close: <path d="M6 6l12 12M18 6 6 18" />,
+  check: <path d="m5 12.5 4.5 4.5L19 7" />,
   help: (
     <>
       <circle cx="12" cy="12" r="9" />

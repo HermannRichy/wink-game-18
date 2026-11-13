@@ -8,7 +8,8 @@ import type { Session } from "@/lib/online/session";
 import { sfx } from "@/lib/sound";
 import { vibrate } from "@/lib/deck";
 import { useChallengeTimer } from "@/lib/useChallengeTimer";
-import { GameFrame, PLAYER_BG, TimerBlock, WaitingFor } from "@/components/game/common";
+import { ActionBar, GameFrame, TimerBlock, TurnBanner, WaitingFor } from "@/components/game/common";
+import { Mascot, POSES } from "@/components/Mascot";
 
 
 export function AovGame({ session, soundOn, onExit }: { session: Session<AovState, AovAction>; soundOn: boolean; onExit: () => void }) {
@@ -36,31 +37,29 @@ export function AovGame({ session, soundOn, onExit }: { session: Session<AovStat
   }, [s.phase]);
 
   return (
-    <GameFrame title="Action ou Vérité" soundOn={soundOn} onExit={onExit} mode={session.mode} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
-      <div className="flex items-center gap-2.5">
-        <span className={`rounded-full border-[3px] border-ink px-3.5 py-2 text-base font-extrabold ${PLAYER_BG[s.turn]}`}>
-          {me === s.turn ? "À toi de jouer" : `Au tour de ${moi}`}
-        </span>
-        <span className="font-mono text-[13px] font-bold">TOUR {s.count + 1}</span>
-      </div>
+    <GameFrame title="Action ou Vérité" game="aov" counter={`Tour ${s.count + 1}`} className="bg-passion" soundOn={soundOn} onExit={onExit} mode={session.mode} partnerOnline={session.partnerOnline} partnerName={names[partnerIdx]}>
+      <TurnBanner name={moi} mine={me === s.turn} />
 
       {s.phase === "choose" && (
-        <div className="flex flex-1 flex-col justify-center gap-4">
-          <h1 className="text-center text-[42px] font-black leading-[0.95] tracking-[-2px]">
-            {moi}, <span className="highlight">action</span> ou <span className="bg-candy px-1.5">vérité</span> ?
+        <div className="relative flex flex-1 flex-col gap-4 pt-2">
+          <h1 className="text-center text-[38px] font-black leading-[0.98] tracking-[-2px]">
+            Tu choisis
+            <br />
+            quoi, {moi} ?
           </h1>
           {mine ? (
-            <div className="grid grid-cols-2 gap-3.5">
+            <div className="flex flex-col gap-4">
               <button
                 type="button"
                 onClick={() => {
                   sfx.click();
                   act({ t: "choose", kind: "action" }, s.turn);
                 }}
-                className="brutal press flex h-44 flex-col items-center justify-center gap-2 rounded-[24px] bg-pop text-[26px] font-black"
+                className="brutal press relative flex h-[150px] flex-col items-start justify-start rounded-[28px] bg-ink px-5 py-4 text-left text-pop shadow-[6px_6px_0_#FFD93D]"
               >
-                ACTION
-                <span className="text-sm font-semibold">Je fais.</span>
+                <span className="font-mono text-[11px] font-bold tracking-[0.14em] text-cream">ON BOUGE</span>
+                <span className="mt-1 text-[50px] font-black leading-none tracking-[-2.5px]">ACTION</span>
+                <span className="absolute bottom-2 right-5 text-[64px] font-black leading-none text-passion" aria-hidden="true">!</span>
               </button>
               <button
                 type="button"
@@ -68,51 +67,55 @@ export function AovGame({ session, soundOn, onExit }: { session: Session<AovStat
                   sfx.click();
                   act({ t: "choose", kind: "verite" }, s.turn);
                 }}
-                className="brutal press flex h-44 flex-col items-center justify-center gap-2 rounded-[24px] bg-candy text-[26px] font-black"
+                className="brutal press relative flex h-[150px] flex-col items-start justify-start rounded-[28px] bg-pop px-5 py-4 text-left"
               >
-                VÉRITÉ
-                <span className="text-sm font-semibold">Je dis tout.</span>
+                <span className="font-mono text-[11px] font-bold tracking-[0.14em]">ON PARLE</span>
+                <span className="mt-1 text-[50px] font-black leading-none tracking-[-2.5px]">VÉRITÉ</span>
+                <span className="absolute bottom-2 right-5 text-[64px] font-black leading-none" aria-hidden="true">?</span>
               </button>
             </div>
           ) : (
-            <WaitingFor name={moi} what="choisit…" />
+            <>
+              <div className="flex justify-center">
+                <Mascot size={150} pose={POSES.clin} interactive />
+              </div>
+              <WaitingFor name={moi} what="choisit…" />
+            </>
           )}
         </div>
       )}
 
       {s.phase === "show" && card && (
         <>
-          <div className={`pop-in brutal flex flex-1 flex-col justify-between gap-6 rounded-[26px] p-6 shadow-[6px_6px_0_#141414] ${card.kind === "action" ? "bg-pop" : LEVEL_BG[card.level]}`}>
-            <span className="self-start rounded-full border-[2.5px] border-ink bg-cream px-3 py-1.5 text-[13px] font-extrabold tracking-wide">
+          <div className="pop-in brutal flex min-h-[340px] flex-1 flex-col gap-6 rounded-[28px] bg-white p-5 shadow-[6px_6px_0_#141414]">
+            <span className={`self-start rounded-full border-[2.5px] border-ink px-3 py-1 text-[12px] font-extrabold tracking-wide ${card.kind === "action" ? "bg-ink text-pop" : LEVEL_BG[card.level]}`}>
               {card.kind === "action" ? "ACTION" : "VÉRITÉ"} · {LEVEL_LABEL[card.level]}
             </span>
-            <p className="text-[30px] font-extrabold leading-[1.08] tracking-[-1px]">{fill(card.text, moi, toi, g)}</p>
-            <TimerBlock timer={timer} seconds={card.seconds} />
+            <p className="text-[29px] font-black leading-[1.1] tracking-[-1px]">{fill(card.text, moi, toi, g)}</p>
+            <div className="mt-auto">
+              <TimerBlock timer={timer} seconds={card.seconds} />
+            </div>
           </div>
           {mine ? (
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => {
+            <ActionBar
+              secondary={{
+                label: "Passer · gage",
+                onClick: () => {
                   timer.stop();
                   act({ t: "refuse" }, s.turn);
-                }}
-                className="h-[58px] rounded-[18px] border-[3px] border-ink bg-cream text-base font-bold"
-              >
-                Refuser · gage
-              </button>
-              <button
-                type="button"
-                onClick={() => {
+                },
+              }}
+              primary={{
+                label: card.kind === "action" ? "C'est fait" : "J'ai répondu",
+                icon: true,
+                className: "bg-ink text-pop",
+                onClick: () => {
                   sfx.success();
                   timer.stop();
                   act({ t: "done" }, s.turn);
-                }}
-                className="brutal press h-[58px] rounded-[18px] bg-passion text-[17px] font-extrabold"
-              >
-                {card.kind === "action" ? "FAIT !" : "RÉPONDU !"}
-              </button>
-            </div>
+                },
+              }}
+            />
           ) : (
             <WaitingFor name={moi} what={card.kind === "action" ? "relève le défi…" : "répond…"} />
           )}
@@ -121,21 +124,22 @@ export function AovGame({ session, soundOn, onExit }: { session: Session<AovStat
 
       {s.phase === "gage" && (
         <>
-          <div className="pop-in brutal flex flex-1 flex-col justify-center gap-3 rounded-[26px] bg-cream p-6">
-            <span className="font-mono text-xs font-bold">REFUSÉ, DONC…</span>
+          <div className="pop-in brutal flex flex-1 flex-col justify-center gap-3 rounded-[28px] bg-white p-6">
+            <span className="self-start rounded-full border-[2.5px] border-ink bg-pop px-3 py-1 text-[12px] font-extrabold">REFUSÉ, DONC… GAGE</span>
             <p className="text-[30px] font-black leading-[1.05] tracking-tight">{fill(gagesFor(s.distance)[s.gageIdx], moi, toi, g)}</p>
           </div>
           {mine ? (
-            <button
-              type="button"
-              onClick={() => {
-                sfx.click();
-                act({ t: "gageDone" }, s.turn);
+            <ActionBar
+              primary={{
+                label: "Gage fait",
+                icon: true,
+                className: "bg-ink text-pop",
+                onClick: () => {
+                  sfx.click();
+                  act({ t: "gageDone" }, s.turn);
+                },
               }}
-              className="brutal press h-[58px] rounded-[18px] bg-passion text-[17px] font-extrabold"
-            >
-              GAGE FAIT
-            </button>
+            />
           ) : (
             <WaitingFor name={moi} what="fait son gage…" />
           )}

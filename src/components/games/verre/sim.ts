@@ -12,9 +12,9 @@ export const COLS = 64;
 /** Débit maximal, en hauteur de verre par seconde */
 export const MAX_FLOW = 0.11;
 /** Marge du ménisque au-dessus du bord quand l'eau est parfaitement calme */
-export const MENISCUS = 0.035;
-/** Quantité minimale à verser à chaque tour */
-export const MIN_POUR = 0.025;
+export const MENISCUS = 0.06;
+/** Quantité minimale (quasi nulle) : évite seulement qu'un simple effleurement compte comme un tour */
+export const MIN_POUR = 0.003;
 const WAVE_SPEED = 0.9;
 /** Force du filet sur la surface */
 const IMPACT = 0.55;
@@ -35,10 +35,12 @@ export class WaterSim {
   holding = false;
   poured = 0;
   overflow = false;
+  /** Secondes écoulées depuis le débordement (flaque qui s'étale) */
+  spillT = 0;
   /** 0..1 : agitation de la surface (sert aussi à la marge du ménisque) */
   energy = 0;
   drops: Drop[] = [];
-  pourX = 0.3;
+  pourX = 0.5;
   private time = 0;
 
   constructor(level: number) {
@@ -47,7 +49,7 @@ export class WaterSim {
 
   /** Marge restante avant débordement (peut être négative) */
   margin() {
-    return MENISCUS * Math.max(0, 1 - this.energy * 3.2);
+    return MENISCUS * Math.max(0.3, 1 - this.energy * 2.6);
   }
 
   surfaceAt(i: number) {
@@ -63,7 +65,7 @@ export class WaterSim {
     const added = this.flow * dt;
     this.level += added;
     this.poured += added;
-    this.pourX = 0.3 + Math.sin(this.time * 2.3) * 0.02;
+    this.pourX = 0.5 + Math.sin(this.time * 2.3) * 0.006;
 
     // Impact du filet : enfonce la surface et projette quelques gouttes
     const ratio = this.flow / MAX_FLOW;
@@ -118,7 +120,10 @@ export class WaterSim {
         }
       }
     }
-    if (this.overflow && this.level > 1) this.level -= 0.03 * dt;
+    if (this.overflow) {
+      this.spillT += dt;
+      if (this.level > 1) this.level -= 0.03 * dt;
+    }
 
     // Gouttes
     for (const d of this.drops) {
