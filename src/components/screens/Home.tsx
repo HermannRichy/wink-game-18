@@ -121,6 +121,18 @@ export function Home({
         </div>
       </section>
 
+      <div className="px-[18px]">
+        <button
+          type="button"
+          onClick={() => {
+            sfx.click();
+            onJoin();
+          }}
+          className="press flex h-14 w-full items-center justify-center gap-2.5 whitespace-nowrap rounded-[18px] border-[3px] border-ink bg-ink px-3 text-[15px] font-extrabold text-pop"
+        >
+          <Icon name="users" size={20} /> REJOINDRE AVEC UN CODE
+        </button>
+      </div>
       {resume && (
         <button
           type="button"
@@ -223,18 +235,6 @@ export function Home({
         })}
       </div>
 
-      <div className="mt-auto px-[18px] pt-2">
-        <button
-          type="button"
-          onClick={() => {
-            sfx.click();
-            onJoin();
-          }}
-          className="press flex h-14 w-full items-center justify-center gap-2.5 whitespace-nowrap rounded-[18px] border-[3px] border-ink bg-ink px-3 text-[15px] font-extrabold text-pop"
-        >
-          <Icon name="users" size={20} /> REJOINDRE AVEC UN CODE
-        </button>
-      </div>
     </main>
   );
 }
