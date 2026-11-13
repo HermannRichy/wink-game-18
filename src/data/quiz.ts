@@ -155,10 +155,12 @@ function seededShuffle<T>(list: T[], seed = 1729): T[] {
   return a;
 }
 
-const ORDERED = seededShuffle(QUIZ);
+/** Ordre de la grille, figé sur les questions d'origine : une modification depuis le dashboard ne mélange pas la grille */
+const ORDER = new Map(seededShuffle(QUIZ).map((q, i) => [q.id, i]));
 
 /** Questions disponibles pour un niveau max, dans l'ordre de la grille (numéro = index + 1). */
 export function quizFor(maxLevel: Level): QuizQuestion[] {
   const maxIdx = LEVEL_ORDER.indexOf(maxLevel);
-  return ORDERED.filter((q) => LEVEL_ORDER.indexOf(q.level) <= maxIdx);
+  // QUIZ peut être modifié depuis le dashboard : questions ajoutées en fin de grille
+  return QUIZ.filter((q) => LEVEL_ORDER.indexOf(q.level) <= maxIdx).sort((a, b) => (ORDER.get(a.id) ?? 1e6) - (ORDER.get(b.id) ?? 1e6));
 }

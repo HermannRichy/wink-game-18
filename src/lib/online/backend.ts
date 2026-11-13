@@ -74,6 +74,10 @@ export interface Backend {
   readStats(): Promise<Stats>;
   /** Admin : date de création (ms) de chaque compte anonyme, lue dans Firebase Authentication */
   readAnonUsers(): Promise<number[]>;
+  /** Modifications des contenus (questions, défis…), lisibles par tous */
+  readContent(): Promise<Record<string, Record<string, Record<string, unknown>>>>;
+  /** Admin : écrit (ou supprime avec null) la modification d'un contenu */
+  writeContent(col: string, id: string, value: Record<string, unknown> | null): Promise<void>;
 }
 
 /** { "2026-11-13": { active: 12, … }, "2026-W46": {…}, "2026-11": {…} } */
@@ -315,6 +319,13 @@ async function firebaseBackend(): Promise<Backend> {
       const snap = await db.get(db.ref(database, "stats"));
       return (snap.val() ?? {}) as Stats;
     },
+    async readContent() {
+      const snap = await db.get(db.ref(database, "content"));
+      return snap.val() ?? {};
+    },
+    async writeContent(col, id, value) {
+      await db.set(db.ref(database, `content/${col}/${id}`), value);
+    },
   };
 }
 
@@ -494,6 +505,20 @@ function localBackend(): Backend {
       } catch {
         return {};
       }
+    },
+    async readContent() {
+      try {
+        return JSON.parse(localStorage.getItem("wink-content-remote") ?? "{}");
+      } catch {
+        return {};
+      }
+    },
+    async writeContent(col, id, value) {
+      const all = JSON.parse(localStorage.getItem("wink-content-remote") ?? "{}");
+      all[col] = { ...all[col] };
+      if (value === null) delete all[col][id];
+      else all[col][id] = value;
+      localStorage.setItem("wink-content-remote", JSON.stringify(all));
     },
     connection(cb) {
       cb(true);

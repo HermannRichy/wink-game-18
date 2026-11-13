@@ -1,5 +1,25 @@
 {
   "rules": {
+    "content": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true",
+      "$col": {
+        ".validate": "$col.matches(/^[a-z_]{2,20}$/)",
+        "$id": {
+          ".validate": "$id.matches(/^[A-Za-z0-9_-]{1,24}$/)",
+          "text": { ".validate": "newData.isString() && newData.val().length <= 600" },
+          "level": { ".validate": "newData.val() === 'flirt' || newData.val() === 'doux' || newData.val() === 'coquin' || newData.val() === 'brulant'" },
+          "kind": { ".validate": "newData.isString() && newData.val().length <= 12" },
+          "joker": { ".validate": "newData.isString() && newData.val().length <= 12" },
+          "seconds": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 600" },
+          "added": { ".validate": "newData.isBoolean()" },
+          "disabled": { ".validate": "newData.isBoolean()" },
+          "deleted": { ".validate": "newData.isBoolean()" },
+          "updatedAt": { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        }
+      }
+    },
     "stats": {
       ".read": "auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true",
       "$day": {

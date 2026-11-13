@@ -12,6 +12,8 @@ import { setSoundEnabled } from "@/lib/sound";
 import { AgeGate } from "@/components/screens/AgeGate";
 import { Install } from "@/components/screens/Install";
 import { stat, statOpen } from "@/lib/stats";
+import { refreshContent, setContentBusy } from "@/lib/content";
+import { getBackend } from "@/lib/online/backend";
 import { InAppBrowser, detectInApp, type InAppInfo } from "@/components/screens/InAppBrowser";
 import { Players } from "@/components/screens/Players";
 import { Home } from "@/components/screens/Home";
@@ -59,7 +61,13 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
   }, [stored?.ageConfirmed]);
   useEffect(() => {
     onBusy(view.name === "game" || view.name === "online");
+    setContentBusy(view.name === "game" || view.name === "online");
   }, [view.name, onBusy]);
+  // Questions et défis modifiés depuis le dashboard (gardés pour le hors ligne)
+  useEffect(() => {
+    if (!stored?.ageConfirmed) return;
+    void refreshContent(async () => (await (await getBackend()).readContent()) as never);
+  }, [stored?.ageConfirmed]);
   const [seenReady, setSeenReady] = useState(false);
 
   // Mémoire anti-répétition chargée avant de jouer

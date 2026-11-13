@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { getBackend, periodKeys, type Stats } from "@/lib/online/backend";
+import { ContentEditor } from "@/components/admin/ContentEditor";
 const GAMES: Record<string, string> = {
   g_cartes: "Cartes",
   g_quiz: "Quiz",
@@ -111,6 +112,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [range, setRange] = useState(30);
+  const [tab, setTab] = useState<"stats" | "content">("stats");
 
   async function login() {
     setBusy(true);
@@ -187,6 +189,30 @@ export default function AdminPage() {
         </button>
       </header>
 
+      <div className="flex gap-2" role="tablist">
+        {(
+          [
+            ["stats", "Statistiques"],
+            ["content", "Contenus"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={`h-11 flex-1 rounded-xl border-[3px] border-ink text-sm font-black uppercase ${tab === id ? "bg-passion text-cream shadow-[3px_3px_0_#141414]" : "bg-white"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "content" ? (
+        <ContentEditor />
+      ) : (
+      <>
       <div className="flex gap-2">
         {[7, 30, 90].map((n) => (
           <button
@@ -277,6 +303,8 @@ export default function AdminPage() {
         <Ranking rows={[["Navigateur interne (Facebook, Instagram…)", sum("in_app")], ["Ouvertures totales (actifs/jour)", sum("active")]]} />
         <p className="mt-2 text-xs font-semibold">Part du navigateur interne : {pct(sum("in_app"), sum("active"))}</p>
       </Card>
+      </>
+      )}
     </main>
   );
 }
