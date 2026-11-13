@@ -7,9 +7,6 @@ import { getBackend, periodKeys } from "@/lib/online/backend";
  * Aucun nom, code de salle, identifiant ni contenu de message n'est envoyé.
  */
 
-/** Comptes anonymes déjà présents dans Firebase Authentication au 13/11/2026 */
-export const SIGNUPS_BASELINE = 350;
-
 /** Compte +1 pour l'événement du jour (silencieux en cas d'erreur) */
 export function stat(name: string) {
   if (typeof window === "undefined") return;

@@ -72,6 +72,8 @@ export interface Backend {
   adminLogin(): Promise<string>;
   /** Admin : lecture de tous les compteurs */
   readStats(): Promise<Stats>;
+  /** Admin : date de création (ms) de chaque compte anonyme, lue dans Firebase Authentication */
+  readAnonUsers(): Promise<number[]>;
 }
 
 /** { "2026-11-13": { active: 12, … }, "2026-W46": {…}, "2026-11": {…} } */
@@ -124,13 +126,6 @@ async function firebaseBackend(): Promise<Backend> {
         }
       });
       signInAnonymously(auth)
-        .then((cred) => {
-          // Nouveau compte anonyme (première connexion de cet appareil)
-          const m = cred.user.metadata;
-          if (m.creationTime && m.creationTime === m.lastSignInTime) {
-            void bump(periodKeys().day, "signups");
-          }
-        })
         .catch((e) => {
           off();
           uidPromise = null;
@@ -138,6 +133,7 @@ async function firebaseBackend(): Promise<Backend> {
         });
     }));
 
+  let adminToken: string | null = null;
   const roomRef = (code: string) => db.ref(database, `rooms/${code}`);
 
   async function bump(period: string, name: string) {
@@ -287,8 +283,33 @@ async function firebaseBackend(): Promise<Backend> {
     },
     bump,
     async adminLogin() {
-      const cred = await signInWithPopup(auth, new GoogleAuthProvider());
+      const provider = new GoogleAuthProvider();
+      // Permet de lister les comptes (Identity Toolkit) : réservé aux propriétaires du projet
+      provider.addScope("https://www.googleapis.com/auth/cloud-platform");
+      const cred = await signInWithPopup(auth, provider);
+      adminToken = GoogleAuthProvider.credentialFromResult(cred)?.accessToken ?? null;
       return cred.user.email ?? "";
+    },
+    async readAnonUsers() {
+      if (!adminToken) throw new Error("no-token");
+      const out: number[] = [];
+      let page = "";
+      do {
+        const res = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/projects/${firebaseConfig.projectId}/accounts:batchGet?maxResults=1000${page ? `&nextPageToken=${encodeURIComponent(page)}` : ""}`,
+          { headers: { Authorization: `Bearer ${adminToken}` } },
+        );
+        if (!res.ok) throw new Error(`users-${res.status}`);
+        const j = (await res.json()) as {
+          users?: { createdAt?: string; providerUserInfo?: unknown[] }[];
+          nextPageToken?: string;
+        };
+        for (const u of j.users ?? []) {
+          if (!u.providerUserInfo?.length && u.createdAt) out.push(Number(u.createdAt));
+        }
+        page = j.nextPageToken ?? "";
+      } while (page);
+      return out;
     },
     async readStats() {
       const snap = await db.get(db.ref(database, "stats"));
@@ -462,6 +483,10 @@ function localBackend(): Backend {
     },
     async adminLogin() {
       return "admin@local";
+    },
+    async readAnonUsers() {
+      const now = Date.now();
+      return [now - 3 * 86400000, now - 2 * 86400000, now - 2 * 86400000, now - 86400000, now];
     },
     async readStats() {
       try {

@@ -2,9 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { getBackend, periodKeys, type Stats } from "@/lib/online/backend";
-import { SIGNUPS_BASELINE } from "@/lib/stats";
-
-const BASELINE_DAY = "2026-11-13";
 const GAMES: Record<string, string> = {
   g_cartes: "Cartes",
   g_quiz: "Quiz",
@@ -110,6 +107,7 @@ function Ranking({ rows }: { rows: [string, number][] }) {
 export default function AdminPage() {
   const [email, setEmail] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [users, setUsers] = useState<number[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [range, setRange] = useState(30);
@@ -121,6 +119,7 @@ export default function AdminPage() {
       const b = await getBackend();
       setEmail(await b.adminLogin());
       setStats(await b.readStats());
+      b.readAnonUsers().then(setUsers).catch(() => setUsers(null));
     } catch (e) {
       const code = (e as { code?: string }).code ?? "";
       setError(
@@ -135,7 +134,9 @@ export default function AdminPage() {
   async function refresh() {
     setBusy(true);
     try {
-      setStats(await (await getBackend()).readStats());
+      const b = await getBackend();
+      setStats(await b.readStats());
+      b.readAnonUsers().then(setUsers).catch(() => setUsers(null));
     } catch {
       setError("Lecture impossible.");
     } finally {
@@ -167,9 +168,7 @@ export default function AdminPage() {
   }
 
   const k = periodKeys();
-  const newSignups = Object.entries(stats)
-    .filter(([d]) => /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= BASELINE_DAY)
-    .reduce((a, [, o]) => a + (o.signups ?? 0), 0);
+  const signupsPerDay = days.map((d) => (users ?? []).filter((t) => new Date(t).toISOString().slice(0, 10) === d).length);
   const gameRows = (Object.keys(GAMES).map((id) => [GAMES[id], sum(id)]) as [string, number][]).sort((a, b) => b[1] - a[1]);
   const gamesPerDay = days.map((d) => Object.keys(GAMES).reduce((a, id) => a + v(d, id), 0));
   const gamesTotal = gamesPerDay.reduce((a, b) => a + b, 0);
@@ -205,7 +204,12 @@ export default function AdminPage() {
         <Kpi label="Actifs aujourd'hui" value={v(k.day, "active")} bg="bg-pop" />
         <Kpi label="Actifs cette semaine" value={v(k.week, "active")} bg="bg-candy" />
         <Kpi label="Actifs ce mois" value={v(k.month, "active")} bg="bg-white" />
-        <Kpi label="Inscriptions anonymes" value={SIGNUPS_BASELINE + newSignups} hint={`${SIGNUPS_BASELINE} au 13/11 + ${newSignups} depuis`} bg="bg-flame" />
+        <Kpi
+          label="Inscriptions anonymes"
+          value={users ? users.length : "–"}
+          hint={users ? `${signupsPerDay.reduce((a, b) => a + b, 0)} sur ${range} j` : "Lecture Firebase Auth impossible"}
+          bg="bg-flame"
+        />
         <Kpi label={`Nouveaux appareils (${range} j)`} value={newDev} bg="bg-white" />
         <Kpi label={`Installations PWA (${range} j)`} value={sum("pwa_install")} bg="bg-white" />
       </div>
@@ -213,6 +217,12 @@ export default function AdminPage() {
       <Card title="Joueurs actifs par jour">
         <Bars days={days} series={[{ name: "Actifs", color: "#ff2e4d", values: series("active") }]} />
       </Card>
+
+      {users && (
+        <Card title="Inscriptions anonymes par jour (Firebase Auth)">
+          <Bars days={days} series={[{ name: "Inscriptions", color: "#ff7a1a", values: signupsPerDay }]} />
+        </Card>
+      )}
 
       <Card title="Nouveaux appareils par jour">
         <Bars days={days} series={[{ name: "Nouveaux", color: "#ffd93d", values: series("new_device") }]} />
