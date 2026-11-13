@@ -182,7 +182,6 @@ export function Home({
         ))}
       </div>
 
-      <p className="text-center text-[11px] font-medium text-ink/70">Emoji 😏 : Twemoji, licence CC-BY 4.0</p>
 
       {chooser && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 p-4" role="dialog" aria-modal="true" aria-labelledby="mode-title" onClick={() => setChooser(null)}>
