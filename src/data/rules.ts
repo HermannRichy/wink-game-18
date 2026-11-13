@@ -27,6 +27,11 @@ export const RULES: Partial<Record<GameId, { tagline: string; steps: [string, st
     steps: ["Chacun choisit en secret : pierre, papier ou ciseaux.", "Révélation en même temps : 3, 2, 1…", "Le premier à 3 manches gagne, l'autre prend un gage."],
     bg: "bg-candy",
   },
+  tour: {
+    tagline: "Un bloc, un défi.",
+    steps: ["Touche un bloc et tire-le doucement pour le sortir de la tour.", "Chaque bloc cache un défi : relève-le ou prends un gage.", "Celui qui fait tomber la tour reçoit le gage final."],
+    bg: "bg-ink",
+  },
   ludo: {
     tagline: "Chaque capture a un prix.",
     steps: ["Chacun lance son dé, de son côté du téléphone. Un 6 pour sortir un pion.", "Flamme = défi, capture = gage pour celui qui se fait prendre.", "Premier à rentrer ses 4 pions : il choisit sa récompense."],
