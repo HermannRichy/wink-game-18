@@ -27,6 +27,11 @@ export const RULES: Partial<Record<GameId, { tagline: string; steps: [string, st
     steps: ["Chacun choisit en secret : pierre, papier ou ciseaux.", "Révélation en même temps : 3, 2, 1…", "Le premier à 3 manches gagne, l'autre prend un gage."],
     bg: "bg-candy",
   },
+  ludo: {
+    tagline: "Chaque capture a un prix.",
+    steps: ["Chacun lance son dé, de son côté du téléphone. Un 6 pour sortir un pion.", "Flamme = défi, capture = gage pour celui qui se fait prendre.", "Premier à rentrer ses 4 pions : il choisit sa récompense."],
+    bg: "bg-flame",
+  },
   verre: {
     tagline: "Remplis le verre sans le faire déborder.",
     steps: ["Maintiens le doigt pour ouvrir le robinet.", "Relâche pour l'arrêter, puis c'est à l'autre.", "L'eau peut bomber au-dessus du bord… jusqu'à craquer. Qui fait déborder prend un gage."],

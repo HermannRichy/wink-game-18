@@ -6,13 +6,14 @@ import { LUDO_CAPTURE, LUDO_FINAL, LUDO_HOME, LUDO_HOT_CELL, LUDO_SIX, type Ludo
 import { db, type Settings } from "@/lib/db";
 import { vibrate } from "@/lib/deck";
 import { freshIndex, markSeen, orderFresh, pickFresh } from "@/lib/seen";
-import { FINISH, applyMove, movablePawns, newPawns, pathOf, type Pawns } from "@/lib/ludo";
+import { DEFAULT_CORNERS, FINISH, applyMove, movablePawns, newPawns, pathOf, type Corners, type Pawns } from "@/lib/ludo";
 import { sfx } from "@/lib/sound";
 import { formatTime, useChallengeTimer } from "@/lib/useChallengeTimer";
 import { Dice3D } from "@/components/ludo/Dice3D";
-import { LudoBoard } from "@/components/ludo/LudoBoard";
+import { CORNER_NAME, DEFAULT_COLORS, LUDO_COLORS, LudoBoard, colorName } from "@/components/ludo/LudoBoard";
+import { GameFrame } from "@/components/game/common";
 import { Mascot, POSES } from "@/components/Mascot";
-import { Icon, IconButton, SoundToggle } from "@/components/ui";
+import { Icon } from "@/components/ui";
 
 type Phase = "roll" | "rolling" | "pick" | "moving" | "event" | "won";
 
@@ -22,7 +23,6 @@ type GameEvent =
   | { kind: "six"; who: number; text: LudoText }
   | { kind: "home"; who: number; text: LudoText };
 
-const PLAYER_BG = ["bg-candy", "bg-flame"];
 const EVENT_TITLE: Record<GameEvent["kind"], string> = {
   capture: "CAPTURE !",
   hot: "CASE BRÛLANTE",
@@ -39,6 +39,13 @@ export function LudoGame({ settings, onExit }: { settings: Settings; onExit: () 
   const [turn, setTurn] = useState(0);
   const [dice, setDice] = useState(1);
   const [rollId, setRollId] = useState(0);
+  // Chaque joueur a son propre dé, de son côté du téléphone
+  const [dice2, setDice2] = useState<[number, number]>([5, 3]);
+  const [rollIds, setRollIds] = useState<[number, number]>([0, 0]);
+  const [corners, setCorners] = useState<Corners>(DEFAULT_CORNERS);
+  const [colors, setColors] = useState<[string, string]>(DEFAULT_COLORS);
+  const [setup, setSetup] = useState(false);
+  const [editing, setEditing] = useState<0 | 1>(0);
   const [phase, setPhase] = useState<Phase>("roll");
   const [movable, setMovable] = useState<number[]>([]);
   const [events, setEvents] = useState<GameEvent[]>([]);
@@ -58,13 +65,27 @@ export function LudoGame({ settings, onExit }: { settings: Settings; onExit: () 
       if (save) {
         setPawns(save.pawns);
         setTurn(save.turn);
+        if (save.corners) setCorners(save.corners);
+        if (save.colors) setColors(save.colors);
+      } else {
+        // Nouvelle partie : on reprend les derniers choix, puis on passe par l'écran des maisons
+        try {
+          const prefs = JSON.parse(localStorage.getItem("wink-ludo-prefs") ?? "null") as { corners: Corners; colors: [string, string] } | null;
+          if (prefs?.corners && prefs.colors) {
+            setCorners(prefs.corners);
+            setColors(prefs.colors);
+          }
+        } catch {
+          /* ignore */
+        }
+        setSetup(true);
       }
       setLoaded(true);
     });
   }, []);
 
   function save(p: Pawns, t: number) {
-    void db.ludo.put({ id: "current", pawns: p, turn: t, updatedAt: Date.now() });
+    void db.ludo.put({ id: "current", pawns: p, turn: t, updatedAt: Date.now(), corners, colors });
   }
 
   const say = (text: string, who: number) => fill(text, names[who], names[1 - who], { addressee: genders[who], other: genders[1 - who] });
@@ -74,6 +95,8 @@ export function LudoGame({ settings, onExit }: { settings: Settings; onExit: () 
     if (phase !== "roll") return;
     const value = 1 + Math.floor(Math.random() * 6);
     setDice(value);
+    setDice2((d) => (turn === 0 ? [value, d[1]] : [d[0], value]));
+    setRollIds((r) => (turn === 0 ? [r[0] + 1, r[1]] : [r[0], r[1] + 1]));
     setRollId((n) => n + 1);
     setPhase("rolling");
     setStatus(null);
@@ -117,7 +140,7 @@ export function LudoGame({ settings, onExit }: { settings: Settings; onExit: () 
     });
 
     later(() => {
-      const result = applyMove(start, turn, pawn, value);
+      const result = applyMove(start, turn, pawn, value, corners);
       setPawns(result.pawns);
       const queue: GameEvent[] = [];
       if (result.captured.length) {
@@ -222,6 +245,17 @@ export function LudoGame({ settings, onExit }: { settings: Settings; onExit: () 
     setFinalChoice(null);
     setStatus(null);
     void db.ludo.delete("current");
+    setSetup(true);
+  }
+
+  function startGame() {
+    sfx.go();
+    try {
+      localStorage.setItem("wink-ludo-prefs", JSON.stringify({ corners, colors }));
+    } catch {
+      /* ignore */
+    }
+    setSetup(false);
   }
 
   const event = events[0];
@@ -314,63 +348,146 @@ export function LudoGame({ settings, onExit }: { settings: Settings; onExit: () 
 
   const moi = names[turn];
 
-  return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 bg-cream px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
-      <div className="flex items-center justify-between">
-        <IconButton
-          label="Retour à l'accueil"
-          icon="back"
-          onClick={() => {
-            sfx.click();
-            onExit();
-          }}
-        />
-        <span className="flex items-center gap-2 text-[22px] font-extrabold">
-          Ludo <span className="rounded-full border-2 border-ink bg-passion px-2 py-0.5 text-[11px] font-extrabold">HOT</span>
-        </span>
-        <SoundToggle on={settings.soundOn} />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2.5">
-        {names.map((n, i) => (
+  // ——— Choix des maisons et des couleurs ———
+  if (setup) {
+    return (
+      <GameFrame title="Ludo Hot" game="ludo" soundOn={settings.soundOn} onExit={onExit} mode="local" partnerOnline partnerName={names[1]}>
+        <div>
+          <span className="font-mono text-[11px] font-bold tracking-[0.14em]">AVANT DE JOUER</span>
+          <h1 className="text-[30px] font-black leading-none tracking-[-1.5px]">Maisons et couleurs</h1>
+          <p className="mt-1 text-[13px] font-bold">
+            Touche un coin libre pour y installer la maison de <b>{names[editing]}</b>.
+          </p>
+        </div>
+        <div className="brutal mx-auto w-full max-w-[290px] overflow-hidden rounded-[18px]">
+          <LudoBoard
+            pawns={pawns}
+            movable={[]}
+            player={0}
+            names={names}
+            corners={corners}
+            colors={colors}
+            labels
+            onPick={() => {}}
+            onCorner={(k) => {
+              sfx.click();
+              setCorners((c) => (editing === 0 ? [k, c[1]] : [c[0], k]));
+            }}
+          />
+        </div>
+        {([0, 1] as const).map((pl) => (
           <div
-            key={i}
-            className={`flex items-center justify-between rounded-2xl border-[3px] border-ink px-3 py-2 ${PLAYER_BG[i]} ${turn === i ? "shadow-[4px_4px_0_#141414]" : "opacity-60"}`}
+            key={pl}
+            role="group"
+            aria-label={`Maison et couleur de ${names[pl]}`}
+            onClick={() => setEditing(pl)}
+            className={`rounded-[20px] border-[3px] border-ink bg-white px-3.5 py-2.5 ${editing === pl ? "shadow-[5px_5px_0_#141414]" : "opacity-80"}`}
           >
-            <span className="truncate text-base font-extrabold">{n}</span>
-            <span className="font-mono text-sm font-bold">{home[i]}/4</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[17px] font-black">{names[pl]}</span>
+              <span className="rounded-full border-[2.5px] border-ink px-2 py-0.5 text-[10px] font-extrabold uppercase" style={{ background: colors[pl] }}>
+                {colorName(colors[pl])}
+              </span>
+              <span className="ml-auto font-mono text-[10px] font-bold uppercase">Maison {CORNER_NAME[corners[pl]]}</span>
+            </div>
+            <div className="mt-2 flex justify-between">
+              {LUDO_COLORS.map((c) => {
+                const taken = colors[1 - pl] === c.id;
+                const sel = colors[pl] === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    disabled={taken}
+                    aria-label={`${c.name} pour ${names[pl]}${taken ? " (prise)" : ""}`}
+                    aria-pressed={sel}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      sfx.click();
+                      setEditing(pl);
+                      setColors((cs) => (pl === 0 ? [c.id, cs[1]] : [cs[0], c.id]));
+                    }}
+                    className={`relative h-[30px] w-[30px] rounded-full border-[2.5px] border-ink ${taken ? "opacity-30" : ""}`}
+                    style={{ background: c.id, boxShadow: sel ? "0 0 0 2.5px #fff, 0 0 0 5px #141414" : undefined }}
+                  >
+                    {taken && <span className="absolute inset-0 flex items-center justify-center text-sm font-black">✕</span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         ))}
-      </div>
+        <div className="mt-auto pt-1">
+          <button type="button" onClick={startGame} className="brutal press h-[60px] w-full rounded-[18px] bg-ink text-lg font-black uppercase text-pop shadow-[5px_5px_0_#FFD93D]">
+            C&apos;est parti
+          </button>
+        </div>
+      </GameFrame>
+    );
+  }
 
-      <div className="brutal overflow-hidden rounded-[18px] bg-cream p-1.5 shadow-[6px_6px_0_#141414]">
-        {loaded && <LudoBoard pawns={pawns} movable={phase === "pick" ? movable : []} player={turn} names={names} onPick={(i) => move(i, dice)} />}
-      </div>
-
-      <div className="flex items-stretch gap-3.5">
-        <button
-          type="button"
-          onClick={roll}
-          disabled={phase !== "roll"}
-          aria-label={phase === "roll" ? `Lancer le dé, au tour de ${moi}` : `Dé : ${dice}`}
-          className={`flex w-[108px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-[20px] border-[3px] border-ink bg-pop py-3 ${phase === "roll" ? "press shadow-[5px_5px_0_#141414]" : ""}`}
+  /** Panneau d'un joueur, avec son dé, de son côté du téléphone */
+  const panel = (pl: 0 | 1) => {
+    const active = turn === pl;
+    const canRoll = active && phase === "roll";
+    const settled = active && (phase === "pick" || phase === "moving" || phase === "event");
+    const msg = !active
+      ? "Attends ton tour…"
+      : phase === "rolling"
+        ? "Ça roule…"
+        : (status ?? (phase === "roll" ? "À toi ! Touche ton dé pour lancer." : phase === "pick" ? "Choisis le pion à avancer." : "…"));
+    return (
+      <div className={pl === 1 ? "rotate-180" : ""}>
+        <div
+          className={`flex items-center gap-3 rounded-[22px] border-[3px] border-ink px-3 py-2.5 ${active ? "bg-white shadow-[5px_5px_0_#141414]" : "bg-[#F3EBE1] opacity-80"}`}
         >
-          <Dice3D value={dice} rollId={rollId} size={52} />
-          <span className="text-[13px] font-extrabold">{phase === "roll" ? "LANCER" : `${dice}`}</span>
-        </button>
-        <div className={`flex flex-1 flex-col justify-center gap-1 rounded-[20px] border-[3px] border-ink px-4 py-3 ${PLAYER_BG[turn]}`}>
-          <span className="font-mono text-xs font-bold">AU TOUR DE</span>
-          <span className="text-xl font-extrabold leading-tight">{moi}</span>
-          <span className="text-sm font-semibold leading-snug">{status ?? (phase === "roll" ? "Touche le dé pour lancer." : phase === "pick" ? "Choisis le pion à avancer." : "…")}</span>
+          <button
+            type="button"
+            onClick={canRoll ? roll : undefined}
+            disabled={!canRoll}
+            aria-label={canRoll ? `Lancer le dé, au tour de ${names[pl]}` : `Dé de ${names[pl]}${settled ? ` : ${dice}` : ""}`}
+            className={`relative shrink-0 rounded-[18px] border-[3px] p-1 ${canRoll ? "press border-ink bg-pop shadow-[3px_3px_0_#141414]" : "border-transparent"} ${active ? "" : "opacity-50"}`}
+          >
+            <Dice3D value={dice2[pl]} rollId={rollIds[pl]} size={active ? 58 : 48} />
+            {settled && (
+              <span className="pop-in absolute -right-3 -top-3 flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-ink bg-passion text-lg font-black text-cream">
+                {dice}
+              </span>
+            )}
+          </button>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="h-4 w-4 shrink-0 rounded-full border-[2.5px] border-ink" style={{ background: colors[pl] }} />
+              <span className="truncate text-[17px] font-black">{names[pl]}</span>
+              <span className="ml-auto shrink-0 font-mono text-[10px] font-bold">{home[pl]}/4 ARRIVÉS</span>
+            </div>
+            <p className="mt-0.5 text-[13px] font-extrabold leading-snug" aria-live={active ? "polite" : undefined}>
+              {msg}
+            </p>
+          </div>
         </div>
       </div>
+    );
+  };
 
-      <div className="flex flex-wrap items-center gap-2 text-[12px] font-bold">
-        <span className="flex items-center gap-1 rounded-full border-2 border-ink bg-ink px-2 py-1 text-pop">FLAMME = DÉFI</span>
-        <span className="rounded-full border-2 border-ink px-2 py-1">CAPTURE = GAGE</span>
-        <span className="rounded-full border-2 border-ink px-2 py-1">6 = BONUS</span>
-        <span className="rounded-full border-2 border-ink px-2 py-1">ÉTOILE = PROTÉGÉ</span>
-        <button type="button" onClick={newGame} className="ml-auto underline">
+  return (
+    <GameFrame title="Ludo Hot" game="ludo" soundOn={settings.soundOn} onExit={onExit} mode="local" partnerOnline partnerName={names[1 - turn]}>
+      {panel(1)}
+
+      <div className="brutal overflow-hidden rounded-[20px]">
+        {loaded && (
+          <LudoBoard pawns={pawns} movable={phase === "pick" ? movable : []} player={turn} names={names} corners={corners} colors={colors} onPick={(i) => move(i, dice)} />
+        )}
+      </div>
+
+      {panel(0)}
+
+      <div className="mt-auto flex flex-wrap items-center gap-1.5 text-[10.5px] font-extrabold uppercase">
+        <span className="rounded-full border-2 border-ink bg-ink px-2 py-0.5 text-pop">Flamme = défi</span>
+        <span className="rounded-full border-2 border-ink px-2 py-0.5">Capture = gage</span>
+        <span className="rounded-full border-2 border-ink px-2 py-0.5">6 = bonus</span>
+        <span className="rounded-full border-2 border-ink px-2 py-0.5">★ protégé</span>
+        <button type="button" onClick={newGame} className="ml-auto normal-case underline">
           Nouvelle partie
         </button>
       </div>
@@ -453,6 +570,6 @@ export function LudoGame({ settings, onExit }: { settings: Settings; onExit: () 
           </div>
         </div>
       )}
-    </main>
+    </GameFrame>
   );
 }

@@ -33,6 +33,10 @@ export interface LudoSave {
   pawns: [number[], number[]];
   turn: number;
   updatedAt: number;
+  /** Maison (coin 0..3) de chaque joueur */
+  corners?: [number, number];
+  /** Couleur de chaque joueur */
+  colors?: [string, string];
 }
 
 export interface Seen {

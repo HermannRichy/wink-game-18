@@ -87,6 +87,11 @@ export function PpcGame({ session, soundOn, onExit }: { session: Session<PpcStat
   }
 
   const revealed = countdown === 0 && s.last;
+  // Pendant le décompte 3, 2, 1 : on garde l'ancien score pour ne pas dévoiler le gagnant
+  const shownScore: [number, number] =
+    s.phase !== "pick" && !revealed && s.last && s.last.winner !== null
+      ? [s.score[0] - (s.last.winner === 0 ? 1 : 0), s.score[1] - (s.last.winner === 1 ? 1 : 0)]
+      : s.score;
   const matchLoser = s.phase === "over" && s.last && s.last.winner !== null ? ((1 - s.last.winner) as 0 | 1) : null;
 
   const hiddenCard = (label: string, sub: string) => (
@@ -109,7 +114,7 @@ export function PpcGame({ session, soundOn, onExit }: { session: Session<PpcStat
       partnerName={names[partnerIdx]}
     >
       <div className="flex items-center justify-center gap-3">
-        <ScoreBar names={names} score={s.score} />
+        <ScoreBar names={names} score={shownScore} />
       </div>
       <span className="-mt-1 text-center font-mono text-[12px] font-bold">PREMIER À {s.target}</span>
 

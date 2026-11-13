@@ -31,7 +31,7 @@ const SHOW: Record<number, [number, number]> = {
 };
 
 export function Dice3D({ value, rollId, size = 64 }: { value: number; rollId: number; size?: number }) {
-  const [rot, setRot] = useState<[number, number]>([-20, 25]);
+  const [rot, setRot] = useState<[number, number]>(() => [SHOW[value][0] - 20, SHOW[value][1] + 25]);
   const spins = useRef(0);
 
   useEffect(() => {
@@ -55,10 +55,18 @@ export function Dice3D({ value, rollId, size = 64 }: { value: number; rollId: nu
           transition: rollId ? "transform 900ms cubic-bezier(0.2, 0.75, 0.25, 1)" : "none",
         }}
       >
+        {/* Noyau plein : on ne voit plus au travers des coins arrondis */}
+        {[1, 2, 3, 4, 5, 6].map((f) => (
+          <div
+            key={`core${f}`}
+            className="absolute bg-[#D9CBB8]"
+            style={{ inset: size * 0.05, transform: `${FACE_TRANSFORM[f]} translateZ(${half * 0.9}px)` }}
+          />
+        ))}
         {[1, 2, 3, 4, 5, 6].map((f) => (
           <div
             key={f}
-            className="absolute inset-0 grid grid-cols-3 grid-rows-3 rounded-[14px] border-[3px] border-ink bg-cream p-[14%]"
+            className="absolute inset-0 grid grid-cols-3 grid-rows-3 rounded-[22%] border-[3px] border-ink bg-[#FFFDF8] p-[14%]"
             style={{ transform: `${FACE_TRANSFORM[f]} translateZ(${half}px)`, backfaceVisibility: "hidden" }}
           >
             {Array.from({ length: 9 }, (_, i) => (
