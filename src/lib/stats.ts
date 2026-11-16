@@ -39,3 +39,20 @@ export function statOpen() {
     /* ignore */
   }
 }
+
+/** Affluence par heure (heure UTC, convertie à l'affichage) : « h » = ouvertures de l'app, « sh » = recherches Célibataires */
+export function statHour(prefix: "h" | "sh") {
+  if (typeof window === "undefined") return;
+  stat(`${prefix}_${String(new Date().getUTCHours()).padStart(2, "0")}`);
+}
+
+/** Une fois par session (ouverture de l'app) */
+export function statSession() {
+  try {
+    if (sessionStorage.getItem("wink-stat-session")) return;
+    sessionStorage.setItem("wink-stat-session", "1");
+  } catch {
+    return;
+  }
+  statHour("h");
+}

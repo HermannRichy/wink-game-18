@@ -69,6 +69,8 @@ interface Ctx {
   myAway: boolean;
   toggleAway: () => void;
   partnerTyping: boolean;
+  /** Derniers messages lisibles (pour un signalement, joints seulement si l'utilisateur le choisit) */
+  recent: () => string[];
 }
 const ChatCtx = createContext<Ctx | null>(null);
 
@@ -321,7 +323,20 @@ export function ChatProvider({ room, me, names, distance, children }: { room: Ro
     void getBackend().then((b) => b.setTyping(code, me));
   }, [code, me]);
 
-  const ctx = useMemo(() => ({ open: openPanel, unread, distance, partnerAway, myAway, toggleAway, partnerTyping: typingNow }), [openPanel, unread, distance, partnerAway, myAway, toggleAway, typingNow]);
+  const msgsRef = useRef<Msg[]>([]);
+  msgsRef.current = msgs;
+  const recent = useCallback(
+    () =>
+      msgsRef.current
+        .filter((m) => m.text && (m.kind === "m" || m.kind === "c"))
+        .slice(-10)
+        .map((m) => `${names[m.from]} : ${m.text}`),
+    [names],
+  );
+  const ctx = useMemo(
+    () => ({ open: openPanel, unread, distance, partnerAway, myAway, toggleAway, partnerTyping: typingNow, recent }),
+    [openPanel, unread, distance, partnerAway, myAway, toggleAway, typingNow, recent],
+  );
 
   return (
     <ChatCtx.Provider value={ctx}>

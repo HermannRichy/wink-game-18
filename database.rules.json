@@ -1,5 +1,67 @@
 {
   "rules": {
+    "singles": {
+      "q": {
+        ".read": "auth != null",
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && root.child('singles/blocked/' + $uid).val() !== true",
+          ".validate": "newData.hasChildren(['g', 's', 'a', 'lo', 'hi', 'c', 'p', 'i', 'm', 'n', 't', 'x'])",
+          "g": { ".validate": "newData.val() === 'h' || newData.val() === 'f'" },
+          "s": { ".validate": "newData.val() === 'h' || newData.val() === 'f'" },
+          "a": { ".validate": "newData.isNumber() && newData.val() >= 18 && newData.val() <= 99" },
+          "lo": { ".validate": "newData.isNumber() && newData.val() >= 18 && newData.val() <= 99" },
+          "hi": { ".validate": "newData.isNumber() && newData.val() >= 18 && newData.val() <= 99" },
+          "c": { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "p": { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "i": { ".validate": "newData.isString() && newData.val().length <= 120" },
+          "m": { ".validate": "newData.val() === 'jouer' || newData.val() === 'discuter' || newData.val() === 'coquin'" },
+          "n": { ".validate": "newData.isString() && newData.val().length <= 20" },
+          "t": { ".validate": "newData.isNumber()" },
+          "x": {
+            ".write": "auth != null && data.exists() && data.val() === ''",
+            ".validate": "newData.isString() && newData.val().length <= 5"
+          },
+          "$other": { ".validate": false }
+        }
+      },
+      "blocked": {
+        "$uid": {
+          ".read": "auth != null && (auth.uid === $uid || auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true)",
+          ".write": "auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true || (auth != null && newData.val() === true && root.child('singles/count/' + $uid).val() >= (root.child('singles/threshold').exists() ? root.child('singles/threshold').val() : 5))"
+        },
+        ".read": "auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true"
+      },
+      "count": {
+        ".read": "auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true",
+        "$uid": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true || auth != null",
+          ".validate": "auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true || (newData.isNumber() && newData.val() === (data.exists() ? data.val() : 0) + 1 && newData.parent().parent().child('reporters/' + $uid + '/' + auth.uid).exists() && !root.child('singles/reporters/' + $uid + '/' + auth.uid).exists())"
+        }
+      },
+      "reporters": {
+        ".write": "auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true",
+        "$uid": {
+          "$by": {
+            ".read": "auth != null && auth.uid === $by",
+            ".write": "auth != null && auth.uid === $by && !data.exists()",
+            ".validate": "newData.val() === true || auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true"
+          }
+        }
+      },
+      "threshold": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true",
+        ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 100"
+      },
+      "reports": {
+        ".read": "auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true",
+        "$id": {
+          ".write": "auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true || (auth != null && !data.exists() && newData.child('by').val() === auth.uid)",
+          ".validate": "auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true || (newData.hasChildren(['u', 'by', 'n', 'r', 'm', 't']) && newData.child('m').isString() && newData.child('m').val().length <= 3000 && newData.child('r').isString() && newData.child('r').val().length <= 60 && newData.child('n').isString() && newData.child('n').val().length <= 20)"
+        }
+      }
+    },
     "content": {
       ".read": true,
       ".write": "auth != null && auth.token.email === 'hermannrichy15@gmail.com' && auth.token.email_verified === true",
@@ -26,7 +88,7 @@
         ".validate": "$day.matches(/^[0-9]{4}-([0-9]{2}-[0-9]{2}|W[0-9]{2}|[0-9]{2})$/)",
         "$name": {
           ".write": "true",
-          ".validate": "$name.matches(/^(active|new_device|age_ok|tour_done|pwa_install|in_app|g_cartes|g_quiz|g_ludo|g_tour|g_aov|g_morpion|g_ppc|g_verre|m_local|m_duo|m_distance|room_created|room_joined|room_ended|chat_msg|chat_sticker|chat_voice|chat_react|err_online)$/) && newData.isNumber() && newData.val() === (data.exists() ? data.val() : 0) + 1"
+          ".validate": "$name.matches(/^(active|new_device|age_ok|tour_done|pwa_install|in_app|g_cartes|g_quiz|g_ludo|g_tour|g_aov|g_morpion|g_ppc|g_verre|m_local|m_duo|m_distance|room_created|room_joined|room_ended|chat_msg|chat_sticker|chat_voice|chat_react|err_online|s_search|s_match|s_share|s_report|s_block|h_[0-9]{2}|sh_[0-9]{2})$/) && newData.isNumber() && newData.val() === (data.exists() ? data.val() : 0) + 1"
         }
       }
     },
@@ -61,6 +123,9 @@
         },
         "seen": {
           "$p": { ".validate": "($p === 'p0' || $p === 'p1') && newData.isNumber()" }
+        },
+        "single": {
+          ".validate": "newData.isString() && newData.val().length < 4000"
         },
         "history": {
           "$p": {

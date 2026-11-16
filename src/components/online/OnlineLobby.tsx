@@ -13,6 +13,7 @@ import { recentSeenKeys, setPartnerSeen } from "@/lib/seen";
 import { DUO_GAMES, OnlineDuoGame } from "@/components/games/registry";
 import { Mascot } from "@/components/Mascot";
 import { Icon, Screen, Spinner, TopBar } from "@/components/ui";
+import { SinglesRoom } from "@/components/singles/Singles";
 
 function errHint(e: unknown) {
   const code = String((e as { code?: string })?.code ?? (e as Error)?.message ?? "");
@@ -28,6 +29,7 @@ export function OnlineLobby({
   initialCode,
   autoJoin,
   onExit,
+  onSingles,
 }: {
   settings: Settings;
   /** Jeu à créer (hôte), ou undefined pour rejoindre */
@@ -38,6 +40,8 @@ export function OnlineLobby({
   /** Rejoint tout de suite avec le code (reprise d'une partie) */
   autoJoin?: boolean;
   onExit: () => void;
+  /** Code d'une partie Célibataires : on bascule dans ce mode */
+  onSingles?: () => void;
 }) {
   const [code, setCode] = useState<string | null>(null);
   const [input, setInput] = useState(initialCode ? normalizeCode(initialCode) : "");
@@ -200,6 +204,11 @@ export function OnlineLobby({
       forgetRoom(code);
     }
     onExit();
+  }
+
+  // ——— Partie Célibataires (rejointe avec un code partagé sur un statut) ———
+  if (code && me !== null && room?.single) {
+    return <SinglesRoom code={code} me={me} settings={settings} onExit={onExit} onSearchAgain={onSingles ?? onExit} />;
   }
 
   // ——— Partie lancée ———

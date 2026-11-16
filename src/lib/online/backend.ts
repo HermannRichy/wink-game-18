@@ -45,6 +45,40 @@ export interface RoomData {
   seen?: { p0?: number; p1?: number };
   /** Questions et défis déjà vus par chaque joueur (anti-répétition commune aux deux téléphones) */
   history?: { p0?: string; p1?: string };
+  /** Mode Célibataires : JSON de SingleRoom (cartes de profil, statut, refus) */
+  single?: string;
+}
+
+/** Entrée de la file d'attente Célibataires (minimum nécessaire, effacée dès le match) */
+export interface QEntry {
+  /** genre, genre recherché */
+  g: "h" | "f";
+  s: "h" | "f";
+  /** âge, âge recherché min/max */
+  a: number;
+  lo: number;
+  hi: number;
+  /** ville, pays (minuscules) */
+  c: string;
+  p: string;
+  /** centres d'intérêt séparés par des virgules */
+  i: string;
+  /** envie : jouer / discuter / coquin */
+  m: string;
+  /** pseudo */
+  n: string;
+  t: number;
+  /** code de la salle quand quelqu'un a matché (vide sinon) */
+  x: string;
+}
+
+export interface Report {
+  u: string;
+  by: string;
+  n: string;
+  r: string;
+  m: string;
+  t: number;
 }
 
 export type JoinResult =
@@ -81,6 +115,22 @@ export interface Backend {
   readContent(): Promise<Record<string, Record<string, Record<string, unknown>>>>;
   /** Admin : écrit (ou supprime avec null) la modification d'un contenu */
   writeContent(col: string, id: string, value: Record<string, unknown> | null): Promise<void>;
+  /** Mise à jour partielle d'une salle (chemins relatifs, null pour supprimer) */
+  updateRoom(code: string, patch: Record<string, unknown>): Promise<void>;
+  // ——— Célibataires ———
+  qRead(): Promise<Record<string, QEntry>>;
+  /** Entre dans la file (effacée automatiquement si la connexion coupe) ; null pour sortir */
+  qPut(entry: QEntry | null): Promise<void>;
+  qWatch(uid: string, cb: (e: QEntry | null) => void): () => void;
+  /** Réserve l'entrée (la sienne ou celle d'un autre) avec un code de salle, seulement si elle est libre */
+  qClaim(uid: string, code: string): Promise<boolean>;
+  qRelease(): Promise<void>;
+  isBlocked(): Promise<boolean>;
+  /** Signale un joueur ; renvoie vrai si ce signalement le bloque (seuil atteint) */
+  report(r: Omit<Report, "by" | "t">): Promise<boolean>;
+  /** Admin : lecture / écriture libre sous singles/ */
+  adminRead(path: string): Promise<unknown>;
+  adminSet(path: string, value: unknown): Promise<void>;
 }
 
 /** { "2026-11-13": { active: 12, … }, "2026-W46": {…}, "2026-11": {…} } */
@@ -332,6 +382,74 @@ async function firebaseBackend(): Promise<Backend> {
     async writeContent(col, id, value) {
       await db.set(db.ref(database, `content/${col}/${id}`), value);
     },
+    async updateRoom(code, patch) {
+      await db.update(roomRef(code), patch);
+    },
+    async qRead() {
+      await uid();
+      const snap = await db.get(db.ref(database, "singles/q"));
+      return (snap.val() ?? {}) as Record<string, QEntry>;
+    },
+    async qPut(entry) {
+      const me = await uid();
+      const r = db.ref(database, `singles/q/${me}`);
+      if (entry) {
+        await db.set(r, entry);
+        void db.onDisconnect(r).remove();
+      } else {
+        await db.remove(r);
+        void db.onDisconnect(r).cancel();
+      }
+    },
+    qWatch(u, cb) {
+      return db.onValue(db.ref(database, `singles/q/${u}`), (snap) => cb((snap.val() as QEntry | null) ?? null));
+    },
+    async qClaim(u, code) {
+      await uid();
+      try {
+        const res = await db.runTransaction(db.ref(database, `singles/q/${u}/x`), (cur: string | null) =>
+          cur === "" ? code : cur === null ? "" : undefined,
+        );
+        return res.committed && res.snapshot.val() === code;
+      } catch {
+        return false;
+      }
+    },
+    async qRelease() {
+      const me = await uid();
+      try {
+        await db.set(db.ref(database, `singles/q/${me}/x`), "");
+      } catch {
+        /* entrée déjà partie */
+      }
+    },
+    async isBlocked() {
+      const me = await uid();
+      const snap = await db.get(db.ref(database, `singles/blocked/${me}`));
+      return snap.val() === true;
+    },
+    async report(r) {
+      const me = await uid();
+      await db.push(db.ref(database, "singles/reports"), { ...r, by: me, t: Date.now() });
+      const already = (await db.get(db.ref(database, `singles/reporters/${r.u}/${me}`))).exists();
+      if (already) return false;
+      await db.update(db.ref(database, "singles"), {
+        [`reporters/${r.u}/${me}`]: true,
+        [`count/${r.u}`]: db.increment(1),
+      });
+      const [count, threshold] = await Promise.all([db.get(db.ref(database, `singles/count/${r.u}`)), db.get(db.ref(database, "singles/threshold"))]);
+      if ((count.val() ?? 0) >= (threshold.val() ?? 5)) {
+        await db.set(db.ref(database, `singles/blocked/${r.u}`), true);
+        return true;
+      }
+      return false;
+    },
+    async adminRead(path) {
+      return (await db.get(db.ref(database, `singles/${path}`))).val();
+    },
+    async adminSet(path, value) {
+      await db.set(db.ref(database, `singles/${path}`), value);
+    },
   };
 }
 
@@ -347,6 +465,18 @@ export function periodKeys(d = new Date()) {
 }
 
 // ———————————————————— Local (tests à deux onglets) ————————————————————
+
+function lsGet<T>(k: string, def: T): T {
+  try {
+    const raw = localStorage.getItem(k);
+    return raw ? (JSON.parse(raw) as T) : def;
+  } catch {
+    return def;
+  }
+}
+function lsSet(k: string, v: unknown) {
+  localStorage.setItem(k, JSON.stringify(v));
+}
 
 function localBackend(): Backend {
   const channel =
@@ -524,6 +654,92 @@ function localBackend(): Backend {
       } catch {
         return {};
       }
+    },
+    async updateRoom(code, patch) {
+      const room = read(code) as unknown as Record<string, unknown> | null;
+      if (!room) return;
+      for (const [path, v] of Object.entries(patch)) {
+        const parts = path.split("/");
+        let o = room;
+        for (const k of parts.slice(0, -1)) o = (o[k] ??= {}) as Record<string, unknown>;
+        if (v === null) delete o[parts[parts.length - 1]];
+        else o[parts[parts.length - 1]] = v;
+      }
+      write(code, room as unknown as RoomData);
+    },
+    async qRead() {
+      return lsGet<Record<string, QEntry>>("wink-local-q", {});
+    },
+    async qPut(entry) {
+      const q = lsGet<Record<string, QEntry>>("wink-local-q", {});
+      if (entry) q[uidValue] = entry;
+      else delete q[uidValue];
+      lsSet("wink-local-q", q);
+    },
+    qWatch(u, cb) {
+      let last = "";
+      const tick = () => {
+        const e = lsGet<Record<string, QEntry>>("wink-local-q", {})[u] ?? null;
+        const j = JSON.stringify(e);
+        if (j !== last) {
+          last = j;
+          cb(e);
+        }
+      };
+      tick();
+      const t = setInterval(tick, 400);
+      return () => clearInterval(t);
+    },
+    async qClaim(u, code) {
+      const q = lsGet<Record<string, QEntry>>("wink-local-q", {});
+      if (!q[u] || q[u].x !== "") return false;
+      q[u].x = code;
+      lsSet("wink-local-q", q);
+      return true;
+    },
+    async qRelease() {
+      const q = lsGet<Record<string, QEntry>>("wink-local-q", {});
+      if (q[uidValue]) q[uidValue].x = "";
+      lsSet("wink-local-q", q);
+    },
+    async isBlocked() {
+      return !!lsGet<Record<string, unknown>>("wink-local-singles", {})[`blocked/${uidValue}`];
+    },
+    async report(r) {
+      const st = lsGet<Record<string, unknown>>("wink-local-singles", {});
+      const reports = (st.reports as Record<string, Report>) ?? {};
+      reports[`r${Date.now()}`] = { ...r, by: uidValue, t: Date.now() };
+      st.reports = reports;
+      const key = `reporters/${r.u}/${uidValue}`;
+      let blocked = false;
+      if (!st[key]) {
+        st[key] = true;
+        const c = ((st[`count/${r.u}`] as number) ?? 0) + 1;
+        st[`count/${r.u}`] = c;
+        if (c >= ((st.threshold as number) ?? 5)) {
+          st[`blocked/${r.u}`] = true;
+          blocked = true;
+        }
+      }
+      lsSet("wink-local-singles", st);
+      return blocked;
+    },
+    async adminRead(path) {
+      const st = lsGet<Record<string, unknown>>("wink-local-singles", {});
+      if (st[path] !== undefined) return st[path];
+      // dossier : regroupe les clés « path/xxx »
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(st)) if (k.startsWith(`${path}/`)) out[k.slice(path.length + 1)] = v;
+      return Object.keys(out).length ? out : null;
+    },
+    async adminSet(path, value) {
+      const st = lsGet<Record<string, unknown>>("wink-local-singles", {});
+      if (value === null) {
+        delete st[path];
+        for (const k of Object.keys(st)) if (k.startsWith(`${path}/`)) delete st[k];
+        if (path.startsWith("reports/")) delete (st.reports as Record<string, unknown> | undefined)?.[path.slice(8)];
+      } else st[path] = value;
+      lsSet("wink-local-singles", st);
     },
     async writeContent(col, id, value) {
       const all = JSON.parse(localStorage.getItem("wink-content-remote") ?? "{}");

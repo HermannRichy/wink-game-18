@@ -11,7 +11,8 @@ import { useInstall } from "@/lib/install";
 import { setSoundEnabled } from "@/lib/sound";
 import { AgeGate } from "@/components/screens/AgeGate";
 import { Install } from "@/components/screens/Install";
-import { stat, statOpen } from "@/lib/stats";
+import { stat, statOpen, statSession } from "@/lib/stats";
+import { Singles } from "@/components/singles/Singles";
 import { refreshContent, setContentBusy } from "@/lib/content";
 import { getBackend } from "@/lib/online/backend";
 import { InAppBrowser, detectInApp, type InAppInfo } from "@/components/screens/InAppBrowser";
@@ -33,6 +34,7 @@ type View =
   | { name: "settings" }
   | { name: "tour" }
   | { name: "help" }
+  | { name: "singles" }
   | { name: "game"; game: GameId }
   | { name: "online"; game?: GameId; mode?: "duo" | "distance"; code?: string; resume?: boolean };
 
@@ -61,7 +63,10 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
     if (info) stat("in_app");
   }, []);
   useEffect(() => {
-    if (stored?.ageConfirmed) statOpen();
+    if (stored?.ageConfirmed) {
+      statOpen();
+      statSession();
+    }
   }, [stored?.ageConfirmed]);
   useEffect(() => {
     onBusy(view.name === "game" || view.name === "online");
@@ -152,6 +157,7 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
   }
 
   if (view.name === "help") return <Help onBack={home} />;
+  if (view.name === "singles") return <Singles settings={settings} onExit={home} />;
   if (view.name === "settings") return <Players settings={settings} onDone={home} onBack={home} onTour={() => setView({ name: "tour" })} />;
 
   if (view.name === "online") {
@@ -164,6 +170,7 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
         initialCode={view.code}
         autoJoin={view.resume}
         onExit={home}
+        onSingles={() => setView({ name: "singles" })}
       />
     );
   }
@@ -216,6 +223,7 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
       onResume={() => resume && setView({ name: "online", code: resume.code, resume: true })}
       onSettings={() => setView({ name: "settings" })}
       onHelp={() => setView({ name: "help" })}
+      onSingles={() => setView({ name: "singles" })}
     />
     {askPartner && (
       <PartnerSheet

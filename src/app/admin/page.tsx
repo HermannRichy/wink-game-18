@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { getBackend, periodKeys, type Stats } from "@/lib/online/backend";
 import { ContentEditor } from "@/components/admin/ContentEditor";
+import { Reports, useNewReports } from "@/components/admin/Reports";
 const GAMES: Record<string, string> = {
   g_cartes: "Cartes",
   g_quiz: "Quiz",
@@ -112,7 +113,8 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [range, setRange] = useState(30);
-  const [tab, setTab] = useState<"stats" | "content">("stats");
+  const [tab, setTab] = useState<"stats" | "content" | "reports">("stats");
+  const [newReports, clearNew] = useNewReports(!!email);
 
   async function login() {
     setBusy(true);
@@ -176,6 +178,14 @@ export default function AdminPage() {
   const gamesTotal = gamesPerDay.reduce((a, b) => a + b, 0);
   const newDev = sum("new_device");
   const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)} %` : "–");
+  /** Compteurs « h_HH » (UTC) additionnés sur la période, ramenés à l'heure locale du navigateur */
+  const hours = (prefix: "h" | "sh") => {
+    const off = -new Date().getTimezoneOffset() / 60;
+    const out = Array.from({ length: 24 }, () => 0);
+    for (const d of days)
+      for (let h = 0; h < 24; h++) out[(((h + off) % 24) + 24) % 24] += v(d, `${prefix}_${String(h).padStart(2, "0")}`);
+    return out;
+  };
 
   return (
     <main className="mx-auto max-w-2xl space-y-4 p-4 pb-16">
@@ -192,8 +202,9 @@ export default function AdminPage() {
       <div className="flex gap-2" role="tablist">
         {(
           [
-            ["stats", "Statistiques"],
+            ["stats", "Stats"],
             ["content", "Contenus"],
+            ["reports", "Signalements"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -201,15 +212,23 @@ export default function AdminPage() {
             type="button"
             role="tab"
             aria-selected={tab === id}
-            onClick={() => setTab(id)}
-            className={`h-11 flex-1 rounded-xl border-[3px] border-ink text-sm font-black uppercase ${tab === id ? "bg-passion text-cream shadow-[3px_3px_0_#141414]" : "bg-white"}`}
+            onClick={() => {
+              setTab(id);
+              if (id === "reports") clearNew();
+            }}
+            className={`relative h-11 flex-1 rounded-xl border-[3px] border-ink text-[12px] font-black uppercase ${tab === id ? "bg-passion text-cream shadow-[3px_3px_0_#141414]" : "bg-white"}`}
           >
             {label}
+            {id === "reports" && newReports > 0 && (
+              <span className="absolute -right-2 -top-2 rounded-full border-2 border-ink bg-pop px-1.5 text-[11px] text-ink">{newReports}</span>
+            )}
           </button>
         ))}
       </div>
 
-      {tab === "content" ? (
+      {tab === "reports" ? (
+        <Reports />
+      ) : tab === "content" ? (
         <ContentEditor />
       ) : (
       <>
@@ -303,8 +322,66 @@ export default function AdminPage() {
         <Ranking rows={[["Navigateur interne (Facebook, Instagram…)", sum("in_app")], ["Ouvertures totales (actifs/jour)", sum("active")]]} />
         <p className="mt-2 text-xs font-semibold">Part du navigateur interne : {pct(sum("in_app"), sum("active"))}</p>
       </Card>
+
+      <Card title={`Affluence par heure (heure locale, ${range} j)`}>
+        <Hours opens={hours("h")} singles={hours("sh")} />
+      </Card>
+
+      <Card title="Célibataires">
+        <Ranking
+          rows={[
+            ["Recherches lancées", sum("s_search")],
+            ["Matchs", sum("s_match")],
+            ["Parties partagées (statut)", sum("s_share")],
+            ["Signalements", sum("s_report")],
+            ["Blocages automatiques", sum("s_block")],
+          ]}
+        />
+        <p className="mt-2 text-xs font-semibold">Taux de match : {pct(sum("s_match"), sum("s_search"))}</p>
+      </Card>
       </>
       )}
     </main>
+  );
+}
+
+/** 24 barres : ouvertures de l'app et recherches Célibataires par heure */
+function Hours({ opens, singles }: { opens: number[]; singles: number[] }) {
+  const W = 320;
+  const H = 110;
+  const max = Math.max(1, ...opens, ...singles);
+  const bw = W / 24;
+  const peak = opens.indexOf(Math.max(...opens));
+  const speak = singles.indexOf(Math.max(...singles));
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H + 16}`} className="w-full" role="img" aria-label="Affluence par heure">
+        <line x1="0" y1={H} x2={W} y2={H} stroke="#141414" strokeWidth="2" />
+        {opens.map((o, h) => (
+          <g key={h}>
+            <title>{`${h} h : ${o} ouvertures, ${singles[h]} recherches`}</title>
+            <rect x={h * bw + 1} y={H - (o / max) * (H - 6)} width={bw / 2 - 1} height={(o / max) * (H - 6)} fill="#FF2E4D" stroke="#141414" strokeWidth="0.8" />
+            <rect x={h * bw + bw / 2} y={H - (singles[h] / max) * (H - 6)} width={bw / 2 - 1} height={(singles[h] / max) * (H - 6)} fill="#FFD93D" stroke="#141414" strokeWidth="0.8" />
+            {h % 3 === 0 && (
+              <text x={h * bw + bw / 2} y={H + 12} fontSize="9" fontWeight="700" textAnchor="middle">
+                {h}h
+              </text>
+            )}
+          </g>
+        ))}
+      </svg>
+      <div className="mt-1 flex flex-wrap gap-x-3 text-[11px] font-bold">
+        <span className="inline-flex items-center gap-1">
+          <i className="inline-block size-3 border-2 border-ink bg-passion" /> Ouvertures de l&apos;app
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <i className="inline-block size-3 border-2 border-ink bg-pop" /> Recherches Célibataires
+        </span>
+      </div>
+      <p className="mt-1.5 text-xs font-semibold">
+        Pic : {opens[peak] ? `${peak} h pour l'app` : "–"}
+        {singles[speak] ? ` · ${speak} h pour les célibataires` : ""}
+      </p>
+    </div>
   );
 }

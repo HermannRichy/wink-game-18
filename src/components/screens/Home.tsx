@@ -41,6 +41,7 @@ export function Home({
   onResume,
   onSettings,
   onHelp,
+  onSingles,
 }: {
   settings: Settings;
   onPlay: (id: GameId, mode: PlayMode) => void;
@@ -49,6 +50,7 @@ export function Home({
   onResume: () => void;
   onSettings: () => void;
   onHelp: () => void;
+  onSingles: () => void;
 }) {
   const levelName = LEVELS.find((l) => l.id === settings.maxLevel)?.name;
   const favs = settings.favoriteGames ?? [];
@@ -133,6 +135,29 @@ export function Home({
           <Icon name="users" size={20} /> REJOINDRE AVEC UN CODE
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          sfx.click();
+          onSingles();
+        }}
+        className="brutal press relative mx-[18px] flex items-center gap-3 overflow-hidden rounded-[22px] bg-candy px-4 py-3 text-left"
+      >
+        <span className="text-[30px] leading-none" aria-hidden="true">
+          💘
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2">
+            <span className="text-[19px] font-black leading-tight">Célibataires</span>
+            <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-extrabold uppercase text-pop">Nouveau</span>
+          </span>
+          <span className="block text-[13px] font-semibold leading-snug">Trouve quelqu&apos;un avec qui jouer, maintenant.</span>
+        </span>
+        <span className="text-xl font-black" aria-hidden="true">
+          →
+        </span>
+      </button>
       {resume && (
         <button
           type="button"

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChatButton, useChatCtx } from "@/components/online/ChatDock";
+import { ReportButton, useSinglesCtx } from "@/components/singles/Report";
 import { useEffect, useState, type ReactNode } from "react";
 import { formatTime, type useChallengeTimer } from "@/lib/useChallengeTimer";
 import { sfx } from "@/lib/sound";
@@ -139,6 +140,7 @@ export function GameFrame({
 
   // L'autre est parti faire un défi hors de l'app : on l'affiche avec un petit minuteur
   const chat = useChatCtx();
+  const single = useSinglesCtx();
   const partnerAway = !!chat?.partnerAway;
   const [awaySec, setAwaySec] = useState(0);
   useEffect(() => {
@@ -219,9 +221,10 @@ export function GameFrame({
               <span className="truncate text-[15px] font-black leading-tight">{partnerName}</span>
               <span className={`truncate text-xs font-bold ${partnerAway ? "text-flame" : alert ? "text-ink/60" : "text-[#1a8f3c]"}`}>● {status}</span>
             </span>
-            <span className="shrink-0 rounded-full bg-ink px-2 py-0.5 text-[10px] font-extrabold uppercase text-pop">{mode === "distance" ? "Distance" : "Duo"}</span>
+            <span className="shrink-0 rounded-full bg-ink px-2 py-0.5 text-[10px] font-extrabold uppercase text-pop">{single ? "Célib" : mode === "distance" ? "Distance" : "Duo"}</span>
           </div>
           <ChatButton />
+          <ReportButton />
         </div>
       )}
       {children}
