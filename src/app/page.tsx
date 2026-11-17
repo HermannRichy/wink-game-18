@@ -69,8 +69,10 @@ function AppInner({ onBusy }: { onBusy: (b: boolean) => void }) {
     }
   }, [stored?.ageConfirmed]);
   useEffect(() => {
-    onBusy(view.name === "game" || view.name === "online");
-    setContentBusy(view.name === "game" || view.name === "online");
+    // Pas de rechargement automatique (mise à jour) pendant une partie, Célibataires compris
+    const busy = view.name === "game" || view.name === "online" || view.name === "singles";
+    onBusy(busy);
+    setContentBusy(busy);
   }, [view.name, onBusy]);
   // Questions et défis modifiés depuis le dashboard (gardés pour le hors ligne)
   useEffect(() => {

@@ -44,7 +44,7 @@ export interface SingleRoom {
   refused?: string[];
 }
 
-export const TAGS = ["Musique", "Foot", "Séries", "Cuisine", "Voyage", "Danse", "Mode", "Jeux vidéo", "Cinéma", "Sport", "Lecture", "Fête"];
+export const TAGS = ["Musique", "Foot", "Séries", "Cuisine", "Voyage", "Danse", "Mode", "Jeux vidéo", "Cinéma", "Sport", "Lecture", "Fête", "Manga/Anime", "Numérique", "Autres"];
 
 export const MOODS: { id: Mood; label: string; desc: string }[] = [
   { id: "discuter", label: "Discuter", desc: "Faire connaissance, tout en douceur" },

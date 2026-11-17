@@ -5,7 +5,7 @@ import type { Settings } from "@/lib/db";
 import { GAMES, type GameId } from "@/data/games";
 import { getBackend, newRoomCode, type PlayerInfo, type QEntry, type RoomData } from "@/lib/online/backend";
 import { useRoom } from "@/lib/online/session";
-import { forgetChatKeys } from "@/lib/online/chat-crypto";
+import { forgetRoom, rememberRoom, setActiveRoom } from "@/lib/online/last-room";
 import { DUO_GAMES, OnlineDuoGame } from "@/components/games/registry";
 import {
   MOOD_LABEL,
@@ -128,6 +128,7 @@ function Search({ profile, onExit, onEdit, onRoom }: { profile: SingleProfile; o
   useEffect(() => {
     let alive = true;
     let offWatch = () => {};
+    let offConn = () => {};
     let timer: ReturnType<typeof setInterval> | undefined;
     const start = Date.now();
     const entry: QEntry = toEntry(profile);
@@ -185,6 +186,14 @@ function Search({ profile, onExit, onEdit, onRoom }: { profile: SingleProfile; o
         } catch {
           return;
         }
+        // Sorti de la file (réseau coupé, appli en arrière-plan) : on y revient, à la même place
+        if (!q[myUid] && !done.current && !creating.current) {
+          try {
+            await b.qPut(entry);
+          } catch {
+            return;
+          }
+        }
         const now = Date.now();
         setOnline(Object.entries(q).filter(([u, e]) => u !== myUid && e && now - e.t < 30 * 60000).length);
         const cand = bestMatch(myUid, entry, q, now - start);
@@ -222,11 +231,16 @@ function Search({ profile, onExit, onEdit, onRoom }: { profile: SingleProfile; o
       };
       void tick();
       timer = setInterval(() => void tick(), 2500);
+      // Retour du réseau ou de l'appli : on vérifie tout de suite
+      offConn = b.connection((ok) => {
+        if (ok) void tick();
+      });
     })();
 
     return () => {
       alive = false;
       offWatch();
+      offConn();
       if (timer) clearInterval(timer);
       if (!done.current) void getBackend().then((b) => b.qPut(null).catch(() => {}));
     };
@@ -333,12 +347,34 @@ export function SinglesRoom({ code, me, settings, onExit, onSearchAgain }: { cod
 
   useEffect(() => {
     let off = () => {};
+    // Retenue pour « Reprendre la partie » si l'app est fermée ou rechargée
+    rememberRoom(code, "aov");
+    setActiveRoom(code);
     void getBackend().then(async (b) => {
       setMyUid(await b.uid());
       off = b.presence(code, me);
     });
     return () => off();
   }, [code, me]);
+
+  // Présence de l'autre (pour les délais d'absence)
+  const partnerOnline = !!room?.players[`p${1 - me}` as "p0" | "p1"]?.online;
+  const [awaySince, setAwaySince] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    setAwaySince(partnerOnline ? null : Date.now());
+  }, [partnerOnline]);
+  useEffect(() => {
+    if (awaySince === null) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [awaySince]);
+  const awayFor = awaySince === null ? 0 : now - awaySince;
+  const [stay, setStay] = useState(0);
+  // Salle supprimée (l'autre a quitté) : on oublie la reprise
+  useEffect(() => {
+    if (room === null && loaded.current) forgetRoom(code);
+  }, [room, code]);
 
   async function patch(p: Record<string, unknown>) {
     await (await getBackend()).updateRoom(code, p);
@@ -353,7 +389,8 @@ export function SinglesRoom({ code, me, settings, onExit, onSearchAgain }: { cod
     } catch {
       /* déjà supprimée */
     }
-    forgetChatKeys(code);
+    forgetRoom(code);
+    setActiveRoom(null);
     if (after === "home") onExit();
     else onSearchAgain();
   }
@@ -436,6 +473,22 @@ export function SinglesRoom({ code, me, settings, onExit, onSearchAgain }: { cod
     return (
       <SinglesCtx.Provider value={{ partnerUid: other.uid, partnerNick: other.n, leave: () => void leave("home") }}>
         <OnlineDuoGame room={room} me={me} soundOn={settings.soundOn} onExit={() => setConfirm(true)} />
+        {awayFor > 120000 + stay * 120000 && !confirm && (
+          <div className="fixed inset-0 z-[70] flex items-end justify-center bg-ink/60 p-4" role="dialog" aria-modal="true" aria-labelledby="sgone">
+            <div className="pop-in flex w-full max-w-md flex-col gap-3 rounded-[26px] border-[3px] border-ink bg-cream p-5 shadow-[6px_6px_0_#141414]">
+              <h2 id="sgone" className="text-[26px] font-black leading-tight">
+                {other.n} semble parti{other.g === "f" ? "e" : ""}
+              </h2>
+              <p className="text-sm font-medium">Plus de nouvelles depuis 2 minutes. {other.g === "f" ? "Elle" : "Il"} peut encore revenir, ou tu peux chercher quelqu&apos;un d&apos;autre.</p>
+              <button type="button" onClick={() => void leave("search")} className="brutal press h-14 rounded-2xl bg-passion font-black uppercase text-cream">
+                Chercher quelqu&apos;un d&apos;autre
+              </button>
+              <button type="button" onClick={() => setStay((n) => n + 1)} className="h-12 rounded-2xl border-[3px] border-ink font-black uppercase">
+                Attendre encore
+              </button>
+            </div>
+          </div>
+        )}
         {confirm && (
           <div className="fixed inset-0 z-[70] flex items-end justify-center bg-ink/60 p-4" role="dialog" aria-modal="true" aria-labelledby="sleave">
             <div className="pop-in flex w-full max-w-md flex-col gap-3 rounded-[26px] border-[3px] border-ink bg-cream p-5 shadow-[6px_6px_0_#141414]">
@@ -462,6 +515,22 @@ export function SinglesRoom({ code, me, settings, onExit, onSearchAgain }: { cod
   // ——— Match : choix du jeu ———
   if (single.status === "match" && other) {
     const mood = sharedMood(mine?.m ?? "discuter", other.m);
+    // L'autre n'arrive pas (réseau coupé au moment du match) : retour à la recherche
+    if (awayFor > 20000) {
+      return (
+        <Screen>
+          <TopBar onBack={() => void leave("home")} title="Célibataires" />
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+            <Mascot size={130} pose={POSES.v} />
+            <h1 className="text-[26px] font-black leading-tight">{other.n} n&apos;a pas pu se connecter</h1>
+            <p className="font-medium">Sa connexion a sans doute coupé au moment du match.</p>
+          </div>
+          <button type="button" onClick={() => void leave("search")} className="brutal press h-14 rounded-2xl bg-passion font-black uppercase text-cream">
+            Chercher quelqu&apos;un d&apos;autre
+          </button>
+        </Screen>
+      );
+    }
     return (
       <MatchScreen
         other={other}
@@ -522,15 +591,28 @@ export function SinglesRoom({ code, me, settings, onExit, onSearchAgain }: { cod
   // ——— Arrivée par code (invité) ———
   const refused = single.refused?.includes(myUid);
   const wrongGender = profile && profile.gender !== single.seek;
+  // L'hôte a fermé l'app : on ne laisse pas l'invité attendre indéfiniment
+  const hostGone = !refused && !wrongGender && awayFor > 20000;
   return (
     <Screen>
-      <TopBar onBack={() => void patch({ "players/p1": null }).then(onExit)} title="Célibataires" />
+      <TopBar
+        onBack={() => {
+          forgetRoom(code);
+          void patch({ "players/p1": null }).then(onExit);
+        }}
+        title="Célibataires"
+      />
       <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-        <Mascot size={130} pose={refused || wrongGender ? POSES.v : POSES.clin} className={refused || wrongGender ? "" : "float"} />
+        <Mascot size={130} pose={refused || wrongGender || hostGone ? POSES.v : POSES.clin} className={refused || wrongGender ? "" : "float"} />
         {refused ? (
           <>
             <h1 className="text-[26px] font-black leading-tight">Pas de suite cette fois.</h1>
             <p className="font-medium">Cette personne n&apos;a pas donné suite. Il y a plein d&apos;autres célibataires !</p>
+          </>
+        ) : hostGone ? (
+          <>
+            <h1 className="text-[26px] font-black leading-tight">L&apos;hôte n&apos;est plus là</h1>
+            <p className="font-medium">{single.cards[0]?.n ?? "Cette personne"} a quitté l&apos;app. Cherche quelqu&apos;un d&apos;autre !</p>
           </>
         ) : wrongGender ? (
           <>
@@ -546,10 +628,13 @@ export function SinglesRoom({ code, me, settings, onExit, onSearchAgain }: { cod
           </>
         )}
       </div>
-      {(refused || wrongGender) && (
+      {(refused || wrongGender || hostGone) && (
         <button
           type="button"
-          onClick={() => void patch({ "players/p1": null }).then(onSearchAgain)}
+          onClick={() => {
+            forgetRoom(code);
+            void patch({ "players/p1": null }).then(onSearchAgain);
+          }}
           className="brutal press h-14 rounded-2xl bg-passion font-black uppercase text-cream"
         >
           Chercher quelqu&apos;un
