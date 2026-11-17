@@ -79,16 +79,16 @@ function ProfileCard({ card, mine }: { card: Card; mine?: Card | null }) {
 /** Point d'entrée du mode Célibataires (depuis l'accueil) */
 export function Singles({ settings, onExit }: { settings: Settings; onExit: () => void }) {
   const [profile, setProfile] = useState<SingleProfile | null>(() => loadProfile());
-  const [editing, setEditing] = useState(!profile);
+  const [editing, setEditing] = useState(!profile?.gc);
   const [room, setRoom] = useState<{ code: string; me: 0 | 1 } | null>(null);
   const [run, setRun] = useState(0);
 
-  if (editing || !profile) {
+  if (editing || !profile?.gc) {
     return (
       <SinglesProfile
         initial={profile}
-        defaults={{ nick: settings.player1, gender: settings.player1Gender }}
-        onBack={() => (profile ? setEditing(false) : onExit())}
+        defaults={{ nick: settings.player1 }}
+        onBack={() => (profile?.gc ? setEditing(false) : onExit())}
         onSave={(p) => {
           setProfile(p);
           setEditing(false);
@@ -195,7 +195,8 @@ function Search({ profile, onExit, onEdit, onRoom }: { profile: SingleProfile; o
           }
         }
         const now = Date.now();
-        setOnline(Object.entries(q).filter(([u, e]) => u !== myUid && e && now - e.t < 30 * 60000).length);
+        // Seulement les personnes du sexe recherché (qui me cherchent aussi)
+        setOnline(Object.entries(q).filter(([u, e]) => u !== myUid && e && e.g === entry.s && e.s === entry.g && now - e.t < 30 * 60000).length);
         const cand = bestMatch(myUid, entry, q, now - start);
         if (!cand || done.current) return;
         const code = newRoomCode();
@@ -316,7 +317,7 @@ function Search({ profile, onExit, onEdit, onRoom }: { profile: SingleProfile; o
         })}
       </div>
       <p className="text-center text-[13px] font-extrabold">
-        🟢 {online} célibataire{online > 1 ? "s" : ""} en ligne en ce moment
+        🟢 {online} {profile.gender === "h" ? `femme${online > 1 ? "s" : ""} célibataire${online > 1 ? "s" : ""}` : `homme${online > 1 ? "s" : ""} célibataire${online > 1 ? "s" : ""}`} en ligne en ce moment
       </p>
       {error && <p className="rounded-xl border-[3px] border-ink bg-candy p-2.5 text-sm font-bold">{error}</p>}
       <div className="mt-auto flex flex-col gap-2 pt-2">
@@ -338,7 +339,11 @@ export function SinglesRoom({ code, me, settings, onExit, onSearchAgain }: { cod
   const room = useRoom(code);
   const single = useMemo(() => parseSingle(room?.single), [room?.single]);
   const [myUid, setMyUid] = useState("");
-  const [profile, setProfile] = useState<SingleProfile | null>(() => loadProfile());
+  // Profil ancien (sexe pré-rempli, non confirmé) : on le redemande
+  const [profile, setProfile] = useState<SingleProfile | null>(() => {
+    const p = loadProfile();
+    return p?.gc ? p : null;
+  });
   const [needProfile, setNeedProfile] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [left, setLeft] = useState(false);
@@ -416,8 +421,8 @@ export function SinglesRoom({ code, me, settings, onExit, onSearchAgain }: { cod
   if (needProfile && !profile) {
     return (
       <SinglesProfile
-        initial={null}
-        defaults={{ nick: settings.player1, gender: settings.player1Gender }}
+        initial={loadProfile()}
+        defaults={{ nick: settings.player1 }}
         cta="Envoyer mon profil"
         onBack={() => void patch({ "players/p1": null }).then(onExit)}
         onSave={(p) => {

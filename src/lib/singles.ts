@@ -21,6 +21,8 @@ export interface SingleProfile {
   country: string;
   tags: string[];
   mood: Mood;
+  /** Sexe choisi explicitement (les anciens profils, pré-remplis, doivent le reconfirmer) */
+  gc?: true;
 }
 
 /** Résumé montré à l'autre (match, ou arrivée par code) */

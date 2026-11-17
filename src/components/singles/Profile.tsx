@@ -15,14 +15,14 @@ export function SinglesProfile({
   cta = "Trouver quelqu'un",
 }: {
   initial: SingleProfile | null;
-  defaults: { nick: string; gender: "h" | "f" | "" };
+  defaults: { nick: string };
   onSave: (p: SingleProfile) => void;
   onBack: () => void;
   cta?: string;
 }) {
   const [nick, setNick] = useState(initial?.nick ?? defaults.nick);
   const [age, setAge] = useState(initial ? String(initial.age) : "");
-  const [gender, setGender] = useState<"h" | "f" | "">(initial?.gender ?? defaults.gender);
+  const [gender, setGender] = useState<"h" | "f" | "">(initial?.gc ? initial.gender : "");
   const [ageMin, setAgeMin] = useState(String(initial?.ageMin ?? 18));
   const [ageMax, setAgeMax] = useState(String(initial?.ageMax ?? 35));
   const [city, setCity] = useState(initial?.city ?? "");
@@ -44,7 +44,7 @@ export function SinglesProfile({
     if (!(lo >= 18 && hi <= 99 && lo <= hi)) return setError("Âge recherché : entre 18 et 99, du plus petit au plus grand.");
     if (!city.trim() || !country.trim()) return setError("Indique ta ville et ton pays.");
     if (tags.length !== 3) return setError("Choisis 3 centres d'intérêt.");
-    const p: SingleProfile = { nick: nick.trim().slice(0, 20), age: a, gender, ageMin: lo, ageMax: hi, city: city.trim().slice(0, 40), country: country.trim().slice(0, 40), tags, mood };
+    const p: SingleProfile = { nick: nick.trim().slice(0, 20), age: a, gender, ageMin: lo, ageMax: hi, city: city.trim().slice(0, 40), country: country.trim().slice(0, 40), tags, mood, gc: true };
     saveProfile(p);
     sfx.success();
     onSave(p);

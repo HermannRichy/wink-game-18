@@ -16,7 +16,7 @@ export interface SinglesCtxValue {
 export const SinglesCtx = createContext<SinglesCtxValue | null>(null);
 export const useSinglesCtx = () => useContext(SinglesCtx);
 
-const REASONS = ["Propos insultants", "Harcèlement ou insistance", "Contenu choquant", "Semble mineur·e", "Faux profil", "Autre"];
+const REASONS = ["Propos insultants", "Harcèlement ou insistance", "Contenu choquant", "Semble mineur·e", "Faux profil (homme/femme)", "Faux profil (autre)", "Autre"];
 
 /** Bouton drapeau, affiché dans le cadre du jeu en mode Célibataires */
 export function ReportButton() {
