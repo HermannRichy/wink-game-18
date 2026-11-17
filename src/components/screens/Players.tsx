@@ -5,6 +5,7 @@ import { LEVELS, LEVEL_BG, type Gender, type Level } from "@/data/cards";
 import { saveSettings, type Settings } from "@/lib/db";
 import { Screen, TopBar } from "@/components/ui";
 import { sfx } from "@/lib/sound";
+import { UpdateCheck } from "@/components/UpdateCheck";
 
 
 export function GenderPicker({ value, onChange, label }: { value: Gender; onChange: (g: Gender) => void; label: string }) {
@@ -168,6 +169,7 @@ export function Players({
             Revoir la visite guidée
           </button>
         )}
+        {onBack && <UpdateCheck />}
       </form>
     </Screen>
   );
