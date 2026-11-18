@@ -130,32 +130,38 @@ export function avoid(uid: string) {
 const skipped = new Set<string>();
 export const skip = (uid: string) => skipped.add(uid);
 
-/** Étape de la recherche : 0 = même ville, 1 = même pays, 2 = partout */
-export function stage(elapsedMs: number) {
-  return elapsedMs < 20000 ? 0 : elapsedMs < 40000 ? 1 : 2;
+/**
+ * Étape de la recherche : 0 = même ville, 1 = même pays, 2 = partout (âge respecté),
+ * 3 = n'importe qui du sexe opposé qui est libre. L'important, c'est de trouver quelqu'un.
+ */
+export function stage(waitMs: number) {
+  return waitMs < 10000 ? 0 : waitMs < 20000 ? 1 : waitMs < 30000 ? 2 : 3;
+}
+
+/** Personne libre, du sexe que je cherche, qui me cherche, encore là */
+export function available(myUid: string, me: QEntry, uid: string, o: QEntry | undefined, now: number) {
+  return !!o && uid !== myUid && o.x === "" && o.g === me.s && o.s === me.g && now - o.t < 30 * 60000;
 }
 
 /**
  * Meilleure personne à réserver parmi la file.
- * Seul le dernier arrivé réserve (on ne prend que des entrées plus anciennes que la sienne) : pas de double match.
+ * - Un seul des deux réserve, choisi par l'ordre des identifiants (pas par l'heure des téléphones) : pas de double match.
+ * - Les critères (ville, pays, âge) servent au premier choix ; ils s'élargissent selon l'attente
+ *   du plus ancien des deux, jusqu'à n'importe qui de libre au bout de 30 s.
  */
-export function bestMatch(myUid: string, me: QEntry, queue: Record<string, QEntry>, elapsedMs: number): string | null {
-  const st = stage(elapsedMs);
-  // Après une minute sans personne, on assouplit l'âge (meilleur profil disponible)
-  const slack = elapsedMs > 60000 ? 5 : 0;
+export function bestMatch(myUid: string, me: QEntry, queue: Record<string, QEntry>, now: number): string | null {
   const av = avoided();
   const myTags = new Set(me.i.split(",").filter(Boolean));
   let best: { uid: string; score: number } | null = null;
   for (const [uid, o] of Object.entries(queue)) {
-    if (uid === myUid || !o || o.x !== "" || o.t >= me.t) continue;
+    if (!available(myUid, me, uid, o, now) || myUid > uid) continue;
     if (av.has(uid) || skipped.has(uid)) continue;
-    if (o.g !== me.s || o.s !== me.g) continue;
-    if (o.a < me.lo - slack || o.a > me.hi + slack || me.a < o.lo - slack || me.a > o.hi + slack) continue;
-    if (Date.now() - o.t > 30 * 60000) continue; // entrée abandonnée
-    const tier = me.c && o.c === me.c ? 0 : me.p && o.p === me.p ? 1 : 2;
-    if (tier > st) continue;
+    const ageOk = o.a >= me.lo && o.a <= me.hi && me.a >= o.lo && me.a <= o.hi;
+    const geo = me.c && o.c === me.c ? 0 : me.p && o.p === me.p ? 1 : 2;
+    const level = ageOk ? geo : 3;
+    if (level > stage(now - Math.min(me.t, o.t))) continue;
     const common = o.i.split(",").filter((x) => myTags.has(x)).length;
-    const score = tier * 10 - common;
+    const score = level * 10 - common;
     if (!best || score < best.score) best = { uid, score };
   }
   return best?.uid ?? null;

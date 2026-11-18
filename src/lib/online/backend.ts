@@ -103,6 +103,8 @@ export interface Backend {
   remove(code: string): Promise<void>;
   /** État de la connexion au serveur */
   connection(cb: (connected: boolean) => void): () => void;
+  /** Heure du serveur (ms) : ne dépend pas de l'horloge, parfois mal réglée, du téléphone */
+  now(): number;
   /** Statistiques anonymes : +1 sur un compteur (jour/semaine/mois), jamais de données perso */
   bump(period: string, name: string): Promise<void>;
   /** Admin : connexion Google, renvoie l'e-mail */
@@ -172,6 +174,10 @@ async function firebaseBackend(): Promise<Backend> {
   const app = getApps()[0] ?? initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const database = db.getDatabase(app);
+  let serverOffset = 0;
+  db.onValue(db.ref(database, ".info/serverTimeOffset"), (snap) => {
+    serverOffset = Number(snap.val()) || 0;
+  });
 
   let uidPromise: Promise<string> | null = null;
   const uid = () =>
@@ -338,6 +344,7 @@ async function firebaseBackend(): Promise<Backend> {
     async remove(code) {
       await db.remove(roomRef(code));
     },
+    now: () => Date.now() + serverOffset,
     connection(cb) {
       return db.onValue(db.ref(database, ".info/connected"), (snap) => cb(snap.val() === true));
     },
@@ -748,6 +755,7 @@ function localBackend(): Backend {
       else all[col][id] = value;
       localStorage.setItem("wink-content-remote", JSON.stringify(all));
     },
+    now: () => Date.now(),
     connection(cb) {
       cb(true);
       return () => {};

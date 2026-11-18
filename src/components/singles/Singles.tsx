@@ -18,6 +18,7 @@ import {
   sharedMood,
   skip,
   stage,
+  available,
   toCard,
   toEntry,
   type Card,
@@ -132,6 +133,7 @@ function Search({ profile, onExit, onEdit, onRoom }: { profile: SingleProfile; o
     let timer: ReturnType<typeof setInterval> | undefined;
     const start = Date.now();
     const entry: QEntry = toEntry(profile);
+    let backendNow = () => Date.now();
 
     const finish = (r: { code: string; me: 0 | 1 }) => {
       if (done.current) return;
@@ -153,6 +155,8 @@ function Search({ profile, onExit, onEdit, onRoom }: { profile: SingleProfile; o
         /* on tente quand même */
       }
       const myUid = await b.uid();
+      backendNow = () => b.now();
+      entry.t = b.now(); // heure du serveur
       try {
         await b.qPut(entry);
       } catch {
@@ -194,10 +198,10 @@ function Search({ profile, onExit, onEdit, onRoom }: { profile: SingleProfile; o
             return;
           }
         }
-        const now = Date.now();
-        // Seulement les personnes du sexe recherché (qui me cherchent aussi)
-        setOnline(Object.entries(q).filter(([u, e]) => u !== myUid && e && e.g === entry.s && e.s === entry.g && now - e.t < 30 * 60000).length);
-        const cand = bestMatch(myUid, entry, q, now - start);
+        const now = backendNow();
+        // Célibataires du sexe opposé, libres : tous peuvent être proposés (les critères ne font que l'ordre)
+        setOnline(Object.entries(q).filter(([u, e]) => available(myUid, entry, u, e, now)).length);
+        const cand = bestMatch(myUid, entry, q, now);
         if (!cand || done.current) return;
         const code = newRoomCode();
         creating.current = code;
@@ -291,6 +295,7 @@ function Search({ profile, onExit, onEdit, onRoom }: { profile: SingleProfile; o
     [profile.city || "Ta ville", 0],
     [profile.country ? `Tout le pays (${profile.country})` : "Ton pays", 1],
     ["Partout", 2],
+    ["Toute personne dispo", 3],
   ];
 
   return (
