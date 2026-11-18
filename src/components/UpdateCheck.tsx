@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Spinner } from "@/components/ui";
+import { applyUpdate, isOutdated } from "@/lib/version";
 
 const BUILT = process.env.NEXT_PUBLIC_BUILD_TIME ?? "";
 const SHA = process.env.NEXT_PUBLIC_BUILD_SHA ?? "";
@@ -36,12 +37,22 @@ export function UpdateCheck() {
       }
       await reg.update();
       const pending = reg.installing ?? reg.waiting;
-      if (!pending) {
+      // Le service worker peut déjà être à jour alors que l'écran tourne encore sur l'ancienne version
+      const newer = await isOutdated();
+      if (!pending && !newer) {
         setState("latest");
         return;
       }
       setState("found");
-      // La nouvelle version prend le contrôle d'elle-même ; filet de sécurité si le rechargement tarde
+      if (newer) {
+        try {
+          sessionStorage.removeItem("wink-reloaded-for");
+        } catch {
+          /* ignore */
+        }
+        await applyUpdate(newer);
+      }
+      // Filet de sécurité si le rechargement tarde
       setTimeout(() => window.location.reload(), 6000);
     } catch {
       setState("error");

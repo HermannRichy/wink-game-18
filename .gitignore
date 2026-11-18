@@ -5,3 +5,5 @@ public/sw.js
 public/swe-worker-*.js
 *.tsbuildinfo
 next-env.d.ts
+
+public/version.json

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { applyUpdate, isOutdated } from "@/lib/version";
 
 /** Recharge l'app quand une nouvelle version prend le contrôle ; propose un bandeau si une partie est en cours. */
 export function UpdateWatcher({ busy }: { busy: boolean }) {
@@ -31,6 +32,12 @@ export function UpdateWatcher({ busy }: { busy: boolean }) {
 
     const check = () => {
       sw.getRegistration().then((r) => r?.update().catch(() => {}));
+      // L'écran peut tourner sur une ancienne version même si le service worker est à jour
+      void isOutdated().then((newer) => {
+        if (!newer) return;
+        if (busyRef.current) setReady(true);
+        else void applyUpdate(newer);
+      });
     };
     const onVisible = () => {
       if (document.visibilityState === "visible") check();
@@ -45,6 +52,11 @@ export function UpdateWatcher({ busy }: { busy: boolean }) {
       clearInterval(timer);
     };
   }, []);
+
+  // Mise à jour mise de côté pendant une partie : on l'applique dès que la partie est finie
+  useEffect(() => {
+    if (ready && !busy) window.location.reload();
+  }, [ready, busy]);
 
   if (!ready) return null;
   return (

@@ -1,8 +1,16 @@
 import withSerwistInit from "@serwist/next";
 import { randomUUID } from "node:crypto";
+import { writeFileSync } from "node:fs";
 import type { NextConfig } from "next";
 
 const revision = randomUUID();
+const SHA = (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7);
+// Version publiée, lue par l'app pour savoir si elle tourne sur une ancienne version
+try {
+  writeFileSync("public/version.json", JSON.stringify({ sha: SHA }));
+} catch {
+  /* lecture seule */
+}
 
 const withSerwist = withSerwistInit({
   swSrc: "src/app/sw.ts",
@@ -20,7 +28,7 @@ const nextConfig: NextConfig = {
   // Version affichée dans les réglages : date du build + commit (Vercel)
   env: {
     NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
-    NEXT_PUBLIC_BUILD_SHA: (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7),
+    NEXT_PUBLIC_BUILD_SHA: SHA,
   },
   images: { unoptimized: true },
 };
