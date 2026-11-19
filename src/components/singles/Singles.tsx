@@ -17,7 +17,6 @@ import {
   parseSingle,
   sharedMood,
   skip,
-  stage,
   available,
   toCard,
   toEntry,
@@ -290,51 +289,70 @@ function Search({ profile, onExit, onEdit, onRoom }: { profile: SingleProfile; o
     );
   }
 
-  const st = stage(elapsed);
-  const steps: [string, number][] = [
-    [profile.city || "Ta ville", 0],
-    [profile.country ? `Tout le pays (${profile.country})` : "Ton pays", 1],
-    ["Partout", 2],
-    ["Toute personne dispo", 3],
-  ];
-
+  const who = profile.gender === "h" ? "femme" : "homme";
   return (
     <Screen>
       <TopBar onBack={onExit} right={<span className="rounded-full bg-ink px-3 py-1 text-[11px] font-extrabold uppercase text-pop">Célibataires</span>} />
-      <div className="flex flex-col items-center text-center">
-        <Mascot size={150} pose={POSES.dynamique} className="float" />
-        <h1 className="mt-1 text-[30px] font-black leading-[1] tracking-[-1.5px]">
-          On te cherche
+      {/* La recherche s'élargit en coulisses (ville, pays, partout, première personne libre) : on ne montre que le radar */}
+      <Radar count={online} />
+      <div className="flex flex-col items-center gap-4 text-center" aria-live="polite">
+        <h1 className="text-[29px] font-black leading-[1.02] tracking-[-1.3px]">
+          On te trouve quelqu&apos;un
           <br />
-          quelqu&apos;un…
+          avec qui jouer…
         </h1>
+        <p className="brutal-sm flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[14px] font-bold">
+          <span className="radar-dot h-3 w-3 shrink-0 rounded-full bg-[#22c55e]" aria-hidden="true" />
+          {online === 0
+            ? "Personne d'autre pour l'instant, ça arrive vite"
+            : `${online} ${who}${online > 1 ? "s" : ""} cherche${online > 1 ? "nt" : ""} aussi en ce moment`}
+        </p>
       </div>
-      <div className="flex flex-col gap-2" aria-live="polite">
-        {steps.map(([label, i]) => {
-          const state = i < st ? "PERSONNE" : i === st ? "EN COURS" : "ENSUITE";
-          return (
-            <div key={i} className={`flex items-center gap-2.5 rounded-2xl border-[3px] border-ink px-3 py-2.5 ${i === st ? "bg-pop" : "bg-white opacity-60"}`}>
-              <span className="flex h-7 w-7 items-center justify-center rounded-full border-[2.5px] border-ink bg-white text-xs font-black">{i < st ? "✓" : i === st ? <Spinner /> : i + 1}</span>
-              <span className="truncate text-[14px] font-extrabold">{label}</span>
-              <span className="ml-auto font-mono text-[11px] font-bold">{state}</span>
-            </div>
-          );
-        })}
-      </div>
-      <p className="text-center text-[13px] font-extrabold">
-        🟢 {online} {profile.gender === "h" ? `femme${online > 1 ? "s" : ""} célibataire${online > 1 ? "s" : ""}` : `homme${online > 1 ? "s" : ""} célibataire${online > 1 ? "s" : ""}`} en ligne en ce moment
-      </p>
       {error && <p className="rounded-xl border-[3px] border-ink bg-candy p-2.5 text-sm font-bold">{error}</p>}
       <div className="mt-auto flex flex-col gap-2 pt-2">
-        <p className="text-center text-[12.5px] font-bold">Personne pour l&apos;instant ? Partage ta partie sur ton statut.</p>
+        {elapsed > 60000 && <p className="text-center text-[13px] font-medium">Tu peux aussi inviter quelqu&apos;un directement :</p>}
         <button type="button" disabled={busy} onClick={shareGame} className="brutal press h-14 rounded-[18px] bg-ink text-[15px] font-black uppercase text-pop disabled:opacity-60">
-          {busy ? "…" : "Créer une partie à partager"}
+          {busy ? "…" : "Partager sur mon statut"}
         </button>
         <button type="button" onClick={onEdit} className="text-sm font-semibold underline">
           Modifier mon profil
         </button>
       </div>
     </Screen>
+  );
+}
+
+/** Winky au centre, ondes en boucle, une bulle anonyme par personne disponible (6 au plus) */
+function Radar({ count }: { count: number }) {
+  const n = Math.min(count, 6);
+  const fills = ["bg-candy", "bg-pop", "bg-flame"];
+  return (
+    <div className="relative mx-auto h-[300px] w-[300px] shrink-0" aria-hidden="true">
+      {[0, 1, 2].map((i) => (
+        <span key={i} className="radar-ring absolute left-1/2 top-1/2 rounded-full border-[3px] border-passion" style={{ animationDelay: `${i * 0.8}s` }} />
+      ))}
+      <div className="radar-orbit absolute inset-0">
+        {Array.from({ length: n }, (_, i) => {
+          const a = (i / n) * Math.PI * 2 + 0.6;
+          const r = i % 2 ? 134 : 118;
+          return (
+            <span
+              key={i}
+              className={`radar-bubble absolute flex h-[46px] w-[46px] items-end justify-center overflow-hidden rounded-full border-[3px] border-ink shadow-[2px_2px_0_#141414] ${fills[i % 3]}`}
+              style={{ left: 150 + Math.cos(a) * r - 23, top: 150 + Math.sin(a) * r * 0.85 - 23 }}
+            >
+              <svg viewBox="0 0 34 34" className="-mb-0.5 h-8 w-8">
+                <circle cx="17" cy="12" r="7" fill="#141414" />
+                <path d="M3 34c1-9 7-13 14-13s13 4 14 13z" fill="#141414" />
+              </svg>
+            </span>
+          );
+        })}
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <Mascot size={150} pose={POSES.brasOuverts} className="float" />
+      </div>
+    </div>
   );
 }
 
