@@ -4,7 +4,8 @@ import { writeFileSync } from "node:fs";
 import type { NextConfig } from "next";
 
 const revision = randomUUID();
-const SHA = (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7);
+// Commit publié : Cloudflare Pages (CF_PAGES_COMMIT_SHA) ou Vercel (VERCEL_GIT_COMMIT_SHA)
+const SHA = (process.env.CF_PAGES_COMMIT_SHA ?? process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7);
 // Version publiée, lue par l'app pour savoir si elle tourne sur une ancienne version
 try {
   writeFileSync("public/version.json", JSON.stringify({ sha: SHA }));
@@ -25,7 +26,7 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   output: "export",
-  // Version affichée dans les réglages : date du build + commit (Vercel)
+  // Version affichée dans les réglages : date du build + commit
   env: {
     NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
     NEXT_PUBLIC_BUILD_SHA: SHA,
